@@ -17,7 +17,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## TODO-Training
 
 ### Network Architecture
-![Teaser?](https://github.com/ZheC/Multi-Person-Pose-Estimation/blob/master/readme/arch.png)
+![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/pose.png)
 
 ## Citation
 Please cite the paper in your publications if it helps your research:    
