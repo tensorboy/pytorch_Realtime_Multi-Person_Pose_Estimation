@@ -6,7 +6,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 ## Contents
 1. [Testing](#testing)
-2. [Training](#training)
+2. [TODO-Training](#training)
 
 ## Require
 1. [Pytorch](http://pytorch.org/)
