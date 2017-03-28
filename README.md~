@@ -6,14 +6,14 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 ## Contents
 1. [Testing](#testing)
-2. [Training](#training)
+2. [TODO-Training](#training)
 
 ## Require
 1. [Pytorch](http://pytorch.org/)
 2. [Caffe](http://caffe.berkeleyvision.org/) is required if you want convert caffe model to a pytorch model.
 
 ## Testing
-- `cd model; sh get_model.sh`
+- `cd model; sh get_model.sh` to download caffe model
 - `cd caffe_to_pytorch; python convert.py`, The converted model have relative error less than 1e-6, and will be located in ./model after converted.
 - `pythont picture_demo.py` to run the picture demo.
 - `pythont web_demo.py` to run the web demo.
