@@ -6,7 +6,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 ## Contents
 1. [Testing](#testing)
-2. [TODO-Training](#TODO-training)
+2. [Training](#training)
 
 ## Require
 1. [Pytorch](http://pytorch.org/)
@@ -19,7 +19,8 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - `pythont picture_demo.py` to run the picture demo.
 - `pythont web_demo.py` to run the web demo.
 
-## TODO-Training
+## Training
+TODO
 
 ### Network Architecture
 ![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/pose.png)
