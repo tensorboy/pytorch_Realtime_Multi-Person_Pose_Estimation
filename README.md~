@@ -8,7 +8,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 1. [Testing](#testing)
 2. [Training](#training)
 
-## Testing
+## Testingn
 - `cd model; sh get_model.sh`
 - `cd caffe_to_pytorch; python convert.py`, The converted model have relative error less than 1e-6, and the pytorch model located in ./model.
 - `pythont picture_demo.py` to run the picture demo.
