@@ -4,6 +4,12 @@ This is a pytorch version of Realtime_Multi-Person_Pose_Estimation, origin code 
 ## Introduction
 Code repo for reproducing 2017 CVPR Oral paper using pytorch.  
 
+## Results
+
+<p align="left">
+<img src="https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/result.png", width="720">
+</p>
+
 ## Contents
 1. [Testing](#testing)
 2. [Training](#training)
