@@ -7,6 +7,10 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## Results
 
 <p align="left">
+<img src="https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/result2.gif", width="720">
+</p>
+
+<p align="left">
 <img src="https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/result1.gif", width="720">
 </p>
 
