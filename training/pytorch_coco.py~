@@ -42,6 +42,13 @@ cap = CocoKepoints(root = '/media/data2/lab/construct/pytorch_pose/training/data
                         annFile = '/media/data2/lab/construct/pytorch_pose/training/dataset/COCO/annotations/person_keypoints_val2014.json',
                         transform=transforms.ToTensor())
                         
+                        
+
+print('Number of samples: ', len(cap))
+img, target = cap[3] # load 4th sample
+
+print("Image Size: ", img.size())
+print(target.keys())
 
 vgg19 = models.vgg19(pretrained = True)
 vgg19_state_dict = vgg19.state_dict()
