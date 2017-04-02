@@ -29,7 +29,9 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - `pythont web_demo.py` to run the web demo.
 
 ## Training
-- `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/` and [COCO official toolbox](https://github.com/pdollar/coco) in `dataset/COCO/coco/`. 
+- `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/` and [COCO official toolbox](https://github.com/pdollar/coco) in `dataset/COCO/coco/ . 
+- `cd training/dataset/COCO/coco/PythonAPI; sudo python setup.py install` to install pycocotools . 
+
 
 ## Related repository
 - CVPR'16, [Convolutional Pose Machines](https://github.com/shihenw/convolutional-pose-machines-release).
