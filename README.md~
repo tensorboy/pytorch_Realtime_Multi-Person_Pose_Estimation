@@ -29,7 +29,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - `pythont web_demo.py` to run the web demo.
 
 ## Training
-- `cd training; sh getData.sh` to download 
+- `cd training; sh getData.sh` to download data set.
 
 ### Network Architecture
 ![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/pose.png)
