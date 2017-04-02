@@ -49,4 +49,11 @@ Please cite the paper in your publications if it helps your research:
 	  journal={CVPR},
 	  year={2017}
 	  }
+    @InProceedings{cao2016realtime,
+    title = {Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
+    author = {Gong, Yunchao and Pawlowski, Marcin and Yang, Fei and Brandy, Louis and Bourdev, Lubomir and Fergus, Rob},
+    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+    month = {June},
+    year = {2017}
+    }
 	  
