@@ -42,13 +42,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 ## Citation
 Please cite the paper in your publications if it helps your research:    
-	  
-    @article{cao2016realtime,
-	  title={Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
-	  author={Zhe Cao and Tomas Simon and Shih-En Wei and Yaser Sheikh},
-	  journal={CVPR},
-	  year={2017}
-	  }
+
     @InProceedings{cao2016realtime,
     title = {Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
     author = {Gong, Yunchao and Pawlowski, Marcin and Yang, Fei and Brandy, Louis and Bourdev, Lubomir and Fergus, Rob},
