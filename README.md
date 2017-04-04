@@ -42,7 +42,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/pose.png)
 
 - training architecture
-![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/training/training_structure.png)
+![Teaser?](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation/blob/master/readme/training_structure.png)
 
 ## Citation
 Please cite the paper in your publications if it helps your research:    
