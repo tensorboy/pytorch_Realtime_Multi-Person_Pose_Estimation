@@ -38,8 +38,6 @@ parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
 parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -177,9 +175,7 @@ class CocoKepoints(data.Dataset):
         return len(self.ids)
         
 
-cap = CocoKepoints(root = '/media/data2/lab/construct/pytorch_pose/training/dataset/COCO/images/val2014',
-                        annFile = '/media/data2/lab/construct/pytorch_pose/training/dataset/COCO/annotations/person_keypoints_val2014.json',
-                        transform=transforms.ToTensor())
+
 
 best_prec1 = 0
 
@@ -203,19 +199,6 @@ def main():
     model.load_state_dict(weights_load)
     model = torch.nn.DataParallel(model).cuda()
 
-    # optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
     cudnn.benchmark = True
 
     # Data loading code
@@ -224,25 +207,13 @@ def main():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-    train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(traindir, transforms.Compose([
-            transforms.RandomSizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True)
+    train_loader = CocoKepoints(root = './training/dataset/COCO/images/train2014',
+                    annFile = './training/dataset/COCO/annotations/person_keypoints_val2014.json',
+                     transform=transforms.ToTensor())
 
-    val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Scale(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+    val_loader =  CocoKepoints(root = './training/dataset/COCO/images/train2014',
+                    annFile = './training/dataset/COCO/annotations/person_keypoints_val2014.json',
+                     transform=transforms.ToTensor())
 
     # define loss function (criterion) and pptimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -299,7 +270,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        prec1, prec5 = metric(output.data, target, topk=(1, 5))
         losses.update(loss.data[0], input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
@@ -399,7 +370,7 @@ def adjust_learning_rate(optimizer, epoch):
         param_group['lr'] = lr
 
 
-def accuracy(output, target, topk=(1,)):
+def metric(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
     batch_size = target.size(0)

@@ -270,7 +270,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        prec1, prec5 = metric(output.data, target, topk=(1, 5))
         losses.update(loss.data[0], input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
@@ -370,7 +370,7 @@ def adjust_learning_rate(optimizer, epoch):
         param_group['lr'] = lr
 
 
-def accuracy(output, target, topk=(1,)):
+def metric(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
     batch_size = target.size(0)
