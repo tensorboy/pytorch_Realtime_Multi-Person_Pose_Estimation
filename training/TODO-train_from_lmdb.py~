@@ -18,6 +18,11 @@ from PIL import Image
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.models as models
+import caffe
+import lmdb
+import cv2
+from caffe.proto import caffe_pb2
+
 
 parser = argparse.ArgumentParser(description='PyTorch COCO keypoints Training')
 parser.add_argument('data', metavar='DIR',
@@ -136,15 +141,28 @@ def get_model():
             out6_1 = self.model6_1(out6)
             out6_2 = self.model6_2(out6)
             
-            return out1_1,out1_2,out2_1,out2_2,out3_1,out3_2,out4_1,out4_2,out6_1,out6_2        
+            return out1_1,out1_2,out2_1,out2_2,out3_1,out3_2,out4_1,out4_2,out5_1,out5_2,out6_1,out6_2        
 
 
     model = pose_model(models)     
     return model
 
 
+lmdb_env = lmdb.open('lmdb_trainVal')
+lmdb_txn = lmdb_env.begin()
+lmdb_cursor = lmdb_txn.cursor()
+datum = caffe_pb2.Datum()
 
-class CocoKepoints(data.Dataset):
+for key, value in lmdb_cursor:
+    datum.ParseFromString(value)
+
+    label = datum.label
+    data = caffe.io.datum_to_array(datum)
+    print data.shape
+    print label
+    
+
+class Cocolmdb(data.Dataset):
 
     def __init__(self, root, annFile, transform=None, target_transform=None):
         from pycocotools.coco import COCO

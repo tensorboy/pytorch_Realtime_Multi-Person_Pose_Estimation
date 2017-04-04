@@ -136,7 +136,7 @@ def get_model():
             out6_1 = self.model6_1(out6)
             out6_2 = self.model6_2(out6)
             
-            return out1_1,out1_2,out2_1,out2_2,out3_1,out3_2,out4_1,out4_2,out6_1,out6_2        
+            return out1_1,out1_2,out2_1,out2_2,out3_1,out3_2,out4_1,out4_2,out5_1,out5_2,out6_1,out6_2        
 
 
     model = pose_model(models)     
