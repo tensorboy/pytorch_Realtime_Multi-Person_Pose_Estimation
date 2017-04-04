@@ -25,8 +25,8 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## Testing
 - `cd model; sh get_model.sh` to download caffe model or download converted pytorch model(https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
 - `cd caffe_to_pytorch; python convert.py` to convert a trained caffe model to pytorch model. The converted model have relative error less than 1e-6, and will be located in `./model` after convert.
-- `pythont picture_demo.py` to run the picture demo.
-- `pythont web_demo.py` to run the web demo.
+- `python picture_demo.py` to run the picture demo.
+- `python web_demo.py` to run the web demo.
 
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/` and [COCO official toolbox](https://github.com/pdollar/coco) in `dataset/COCO/coco/ . 
