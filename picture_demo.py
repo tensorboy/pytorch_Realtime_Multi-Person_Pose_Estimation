@@ -251,7 +251,7 @@ for k in range(len(mapIdx)):
             for j in range(nB):
                 vec = np.subtract(candB[j][:2], candA[i][:2])
                 norm = math.sqrt(vec[0]*vec[0] + vec[1]*vec[1])
-				norm = max(norm, MIN_FLT)
+                norm = max(norm, MIN_FLT)
                 vec = np.divide(vec, norm)
                 
                 startend = zip(np.linspace(candA[i][0], candB[j][0], num=mid_num), \
