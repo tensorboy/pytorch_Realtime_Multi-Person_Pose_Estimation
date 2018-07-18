@@ -236,6 +236,8 @@ connection_all = []
 special_k = []
 mid_num = 10
 
+MIN_FLT = 1e-5
+
 for k in range(len(mapIdx)):
     score_mid = paf_avg[:,:,[x-19 for x in mapIdx[k]]]
     candA = all_peaks[limbSeq[k][0]-1]
@@ -249,6 +251,7 @@ for k in range(len(mapIdx)):
             for j in range(nB):
                 vec = np.subtract(candB[j][:2], candA[i][:2])
                 norm = math.sqrt(vec[0]*vec[0] + vec[1]*vec[1])
+                norm = max(norm, MIN_FLT)
                 vec = np.divide(vec, norm)
                 
                 startend = zip(np.linspace(candA[i][0], candB[j][0], num=mid_num), \
