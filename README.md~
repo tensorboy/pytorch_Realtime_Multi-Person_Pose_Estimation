@@ -21,6 +21,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## Require
 1. [Pytorch](http://pytorch.org/)
 2. [Caffe](http://caffe.berkeleyvision.org/) is required if you want convert caffe model to a pytorch model.
+3. [pycocotools](pip install pycocotools)
 
 ## Testing
 - `cd model; sh get_model.sh` to download caffe model or download converted pytorch model(https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
@@ -47,7 +48,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## Citation
 Please cite the paper in your publications if it helps your research:    
 
-    @InProceedings{cao2016realtime,
+    @InProceedings{cao2017realtime,
       title = {Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
       author = {Zhe Cao and Tomas Simon and Shih-En Wei and Yaser Sheikh},
       booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
