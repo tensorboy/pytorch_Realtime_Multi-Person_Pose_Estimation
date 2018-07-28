@@ -2,7 +2,6 @@
 mkdir dataset
 mkdir dataset/COCO/
 cd dataset/COCO/
-git clone https://github.com/pdollar/coco.git
 cd ../../
 
 mkdir dataset/COCO/images
