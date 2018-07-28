@@ -147,7 +147,7 @@ param_, model_ = config_reader()
 
 #torch.nn.functional.pad(img pad, mode='constant', value=model_['padValue'])
 tic = time.time()
-test_image = './sample_image/ski.jpg'
+test_image = './readme/ski.jpg'
 #test_image = 'a.jpg'
 oriImg = cv2.imread(test_image) # B,G,R order
 imageToTest = Variable(T.transpose(T.transpose(T.unsqueeze(torch.from_numpy(oriImg).float(),0),2,3),1,2),volatile=True).cuda()
