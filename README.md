@@ -23,15 +23,17 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 2. [Caffe](http://caffe.berkeleyvision.org/) is required if you want convert caffe model to a pytorch model.
 3. pip install pycocotools
 
-## Testing
-- `cd model; sh get_model.sh` to download caffe model or download [converted pytorch model](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
+## Demo
+- Download [converted pytorch model](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
 - `cd network/caffe_to_pytorch; python convert.py` to convert a trained caffe model to pytorch model. The converted model have relative error less than 1e-6, and will be located in `./network/weight` after convert.
-- `python picture_demo.py` to run the picture demo.
-- `python web_demo.py` to run the web demo.
+- `python demo/picture_demo.py` to run the picture demo.
+- `python demo/web_demo.py` to run the web demo.
 
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/`
 - Download the mask of the unlabeled person at [Dropbox](https://www.dropbox.com/s/bd9ty7b4fqd5ebf/mask.tar.gz?dl=0)
+
+## Demo
 
 ## Related repository
 - CVPR'16, [Convolutional Pose Machines](https://github.com/shihenw/convolutional-pose-machines-release).

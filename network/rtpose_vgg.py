@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
 import torch.utils.model_zoo as model_zoo
-from tnn.network.base_model import BaseModel
 from torch.autograd import Variable
 from torch.nn import init
 
@@ -51,7 +50,7 @@ def make_stages(cfg_dict):
     layers = []
     for i in range(len(cfg_dict) - 1):
         one_ = cfg_dict[i]
-        for k, v in one_.iteritems():
+        for k, v in one_.items():
             if 'pool' in k:
                 layers += [nn.MaxPool2d(kernel_size=v[0], stride=v[1],
                                         padding=v[2])]
@@ -60,7 +59,7 @@ def make_stages(cfg_dict):
                                    kernel_size=v[2], stride=v[3],
                                    padding=v[4])
                 layers += [conv2d, nn.ReLU(inplace=True)]
-    one_ = cfg_dict[-1].keys()
+    one_ = list(cfg_dict[-1].keys())
     k = one_[0]
     v = cfg_dict[-1][k]
     conv2d = nn.Conv2d(in_channels=v[0], out_channels=v[1],
@@ -88,26 +87,6 @@ def make_vgg19_block(block):
                 layers += [conv2d, nn.ReLU(inplace=True)]
     return nn.Sequential(*layers)
 
-
-def make_mobilenet_block(block):
-    """Builds a mobilenet block from a dictionary
-    Args:
-        block: a dictionary
-    """
-    layers = []
-    for i in range(len(block)):
-        one_ = block[i]
-        for k, v in one_.items():
-            if 'bn' in k:
-                layers += [conv_bn(inp=v[0], oup=v[1], stride=v[2])]
-            elif 'dw' in k:
-                layers += [conv_dw(inp=v[0], oup=v[1], stride=v[2])]
-            else:
-                conv2d = nn.Conv2d(in_channels=v[0], out_channels=v[1],
-                                   kernel_size=v[3], stride=v[2],
-                                   padding=v[4])
-                layers += [conv2d, nn.ReLU(inplace=True)]
-    return nn.Sequential(*layers)
 
 
 def get_model(trunk='vgg19'):
@@ -185,14 +164,10 @@ def get_model(trunk='vgg19'):
         print("Bulding VGG19")
         models['block0'] = make_vgg19_block(block0)
 
-    elif trunk == 'mobilenet':
-        print("Building mobilenet")
-        models['block0'] = make_mobilenet_block(block0)
+    for k, v in blocks.items():
+        models[k] = make_stages(list(v))
 
-    for k, v in blocks.iteritems():
-        models[k] = make_stages(v)
-
-    class rtpose_model(BaseModel):
+    class rtpose_model(nn.Module):
         def __init__(self, model_dict):
             super(rtpose_model, self).__init__()
             self.model0 = model_dict['block0']
@@ -210,7 +185,7 @@ def get_model(trunk='vgg19'):
             self.model5_2 = model_dict['block5_2']
             self.model6_2 = model_dict['block6_2']
 
-            self._initialize_weights_orthogonal()
+            self._initialize_weights_norm()
 
         def forward(self, x):
 
@@ -258,61 +233,26 @@ def get_model(trunk='vgg19'):
 
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
-                    init.normal(m.weight, std=0.01)
+                    init.normal_(m.weight, std=0.01)
                     if m.bias is not None:  # mobilenet conv2d doesn't add bias
                         init.constant(m.bias, 0.0)
 
             # last layer of these block don't have Relu
-            init.normal(self.model1_1[8].weight, std=0.01)
-            init.normal(self.model1_2[8].weight, std=0.01)
+            init.normal_(self.model1_1[8].weight, std=0.01)
+            init.normal_(self.model1_2[8].weight, std=0.01)
 
-            init.normal(self.model2_1[12].weight, std=0.01)
-            init.normal(self.model3_1[12].weight, std=0.01)
-            init.normal(self.model4_1[12].weight, std=0.01)
-            init.normal(self.model5_1[12].weight, std=0.01)
-            init.normal(self.model6_1[12].weight, std=0.01)
+            init.normal_(self.model2_1[12].weight, std=0.01)
+            init.normal_(self.model3_1[12].weight, std=0.01)
+            init.normal_(self.model4_1[12].weight, std=0.01)
+            init.normal_(self.model5_1[12].weight, std=0.01)
+            init.normal_(self.model6_1[12].weight, std=0.01)
 
-            init.normal(self.model2_2[12].weight, std=0.01)
-            init.normal(self.model3_2[12].weight, std=0.01)
-            init.normal(self.model4_2[12].weight, std=0.01)
-            init.normal(self.model5_2[12].weight, std=0.01)
-            init.normal(self.model6_2[12].weight, std=0.01)
+            init.normal_(self.model2_2[12].weight, std=0.01)
+            init.normal_(self.model3_2[12].weight, std=0.01)
+            init.normal_(self.model4_2[12].weight, std=0.01)
+            init.normal_(self.model5_2[12].weight, std=0.01)
+            init.normal_(self.model6_2[12].weight, std=0.01)
 
-        def _initialize_weights_orthogonal(self):
-
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    init.orthogonal(m.weight, gain=init.calculate_gain('relu'))
-                    if m.bias is not None:  # mobilenet conv2d doesn't add bias
-                        init.constant(m.bias, 0.001)
-
-            # last layer of these block don't have Relu
-            init.orthogonal(self.model1_1[8].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model1_2[8].weight,
-                            gain=init.calculate_gain('linear'))
-
-            init.orthogonal(self.model2_1[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model3_1[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model4_1[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model5_1[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model6_1[12].weight,
-                            gain=init.calculate_gain('linear'))
-
-            init.orthogonal(self.model2_2[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model3_2[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model4_2[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model5_2[12].weight,
-                            gain=init.calculate_gain('linear'))
-            init.orthogonal(self.model6_2[12].weight,
-                            gain=init.calculate_gain('linear'))
 
         @staticmethod
         def build_loss(saved_for_loss, heat_temp, heat_weight,
@@ -413,30 +353,6 @@ def use_vgg(model, model_path, trunk):
     model.load_state_dict(state)
     print('load imagenet pretrained model: {}'.format(model_path))
 
-
-def use_mobilenet(model):
-    # get keys for mobilenet model only
-    state = model.state_dict()
-    model0_keys = []
-    for k in state.keys():
-        if 'model0' in k:
-            model0_keys.append(k)
-
-    total_layers = len(model0_keys) - 6
-
-    # load pretrained model
-    checkpoint = torch.load('/home/alberto/mobilenet_sgd_rmsprop_69.526.tar')
-    checkpoint_state = checkpoint['state_dict']
-    checkpoint_keys = checkpoint_state.keys()[:total_layers]
-
-    # load weights
-    weights_load = {}
-    for i in range(total_layers):
-        weights_load[model0_keys[i]] = checkpoint_state[checkpoint_keys[i]]
-
-    # update model state
-    state.update(weights_load)
-    model.load_state_dict(state)
 
 
 def build_names():
