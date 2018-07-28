@@ -1,5 +1,3 @@
-"""MSCOCO evaluation script in Python
-"""
 import os
 import time
 
@@ -10,14 +8,11 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 import torch
-from cpm.cpm_layer import rtpose_postprocess_np
-from datasets.coco_data.preprocessing import (inception_preprocess,
+from training.datasets.coco_data.preprocessing import (inception_preprocess,
                                               rtpose_preprocess,
                                               ssd_preprocess, vgg_preprocess)
-from paf_to_pose import paf_to_pose, people_to_pose, plot_pose
-#from paf_to_pose_origin import paf_to_pose
-from tnn.network.net_utils import load_net, np_to_variable
-from tnn.utils import im_transform
+from network.post import decode_pose
+from network import im_transform
 
 '''
 MS COCO annotation order:
@@ -136,7 +131,7 @@ def get_outputs(multiplier, img, model, preprocess):
         batch_images[m, :, :im_data.shape[1], :im_data.shape[2]] = im_data
 
     # several scales as a batch
-    batch_var = np_to_variable(batch_images, is_cuda=True, volatile=True)
+    batch_var = torch.from_numpy(batch_images).cuda().float()
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
     heatmaps = output2.cpu().data.numpy().transpose(0, 2, 3, 1)
@@ -149,15 +144,15 @@ def get_outputs(multiplier, img, model, preprocess):
         # padding
         im_cropped, im_scale, real_shape = im_transform.crop_with_factor(
             img, inp_size, factor=8, is_ceil=True)
-        heatmap = heatmaps[m, :im_cropped.shape[0] /
-                           8, :im_cropped.shape[1] / 8, :]
+        heatmap = heatmaps[m, :int(im_cropped.shape[0] /
+                           8), :int(im_cropped.shape[1] / 8), :]
         heatmap = cv2.resize(heatmap, None, fx=8, fy=8,
                              interpolation=cv2.INTER_CUBIC)
         heatmap = heatmap[0:real_shape[0], 0:real_shape[1], :]
         heatmap = cv2.resize(
             heatmap, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_CUBIC)
 
-        paf = pafs[m, :im_cropped.shape[0] / 8, :im_cropped.shape[1] / 8, :]
+        paf = pafs[m, :int(im_cropped.shape[0] / 8), :int(im_cropped.shape[1] / 8), :]
         paf = cv2.resize(paf, None, fx=8, fy=8, interpolation=cv2.INTER_CUBIC)
         paf = paf[0:real_shape[0], 0:real_shape[1], :]
         paf = cv2.resize(
@@ -266,7 +261,7 @@ def run_eval(model, preprocess, our_post_processing):
     # This txt file is fount in the caffe_rtpose repository:
     # https://github.com/CMU-Perceptual-Computing-Lab/caffe_rtpose/blob/master
     img_ids, img_paths, img_heights, img_widths = get_coco_val(
-        './datasets/coco_data/image_info_val2014_1k.txt')
+        './evaluation/coco_data/image_info_val2014_1k.txt')
     # img_ids = img_ids[81:82]
     # img_paths = img_paths[81:82]
     print("Total number of validation images {}".format(len(img_ids)))
@@ -300,30 +295,14 @@ def run_eval(model, preprocess, our_post_processing):
 
         # choose which post-processing to use, our_post_processing
         # got slightly higher AP but is slow.
-        if our_post_processing:
-            param = {'thre1': 0.1, 'thre2': 0.05, 'thre3': 0.5}
-            canvas, to_plot, candidate, subset = paf_to_pose(
-                oriImg, param, heatmap, paf)
+        param = {'thre1': 0.1, 'thre2': 0.05, 'thre3': 0.5}
+        canvas, to_plot, candidate, subset = paf_to_pose(
+            oriImg, param, heatmap, paf)
 
-            # subset indicated how many peoples foun in this image.
-            append_result(img_ids[i], subset, candidate, outputs)
+        # subset indicated how many peoples foun in this image.
+        append_result(img_ids[i], subset, candidate, outputs)
 
-        else:
-            param = {'thre1': 0.05, 'thre2': 0.05}
-            heatmap = np.expand_dims(heatmap.transpose([2, 0, 1]), 0)
-            paf = np.expand_dims(paf.transpose([2, 0, 1]), 0)
-            people_list = rtpose_postprocess_np(
-                heatmap, paf, num_part=18, gpu=0, param=param)
-            people_list = people_list[0]
-            im_scale = heatmap.shape[2] / float(oriImg.shape[0])
-            people_list[:, :, 0:2] /= im_scale
 
-            joint_list, person_to_joint_assoc = people_to_pose(
-                people_list)
-            to_plot, canvas = plot_pose(
-                oriImg, joint_list, person_to_joint_assoc)
-            append_result(
-                img_ids[i], person_to_joint_assoc, joint_list, outputs)
         # cv2.imshow('test', canvas)
         # cv2.waitKey(0)
     # Eval and show the final result!
