@@ -7,7 +7,7 @@ import time
 import scipy
 import argparse
 import matplotlib
-from torch import np
+import numpy as np
 import pylab as plt
 from joblib import Parallel, delayed
 import util
