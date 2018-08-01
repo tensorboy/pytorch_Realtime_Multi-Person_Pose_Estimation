@@ -17,7 +17,7 @@ nesterov = True
 inp_size = 368
 feat_stride = 8
 
-model_path = './models/'
+model_path = './network/weight/'
 
 # Set Training parameters
 exp_name = 'original_rtpose'
@@ -77,8 +77,8 @@ def get_loss(saved_for_loss, heat_temp, heat_weight,
         # print(total_loss)
 
         # Get value from Variable and save for log
-        saved_for_log[names[2 * j]] = loss1.data[0]
-        saved_for_log[names[2 * j + 1]] = loss2.data[0]
+        saved_for_log[names[2 * j]] = loss1.item()
+        saved_for_log[names[2 * j + 1]] = loss2.item()
 
     saved_for_log['max_ht'] = torch.max(
         saved_for_loss[-1].data[:, 0:-1, :, :])
@@ -115,7 +115,7 @@ def train(train_loader, model, optimizer, epoch):
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, heat_mask,
                paf_target, paf_mask)
         
-        losses.update(total_loss.data[0], img.size(0))
+        losses.update(total_loss.item(), img.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -160,7 +160,7 @@ def validate(val_loader, model, epoch):
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, heat_mask,
                paf_target, paf_mask)
 
-        losses.update(total_loss.data[0], img.size(0))
+        losses.update(total_loss.item(), img.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -171,12 +171,6 @@ def validate(val_loader, model, epoch):
         batch_time.update(time.time() - end)
         end = time.time()  
     return losses.avg
-
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
-
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -235,14 +229,14 @@ optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
                            nesterov=nesterov)
                                    
                                                                
-for epoch in range(10):
+for epoch in range(5):
     #adjust_learning_rate(optimizer, epoch)
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
-    val_loss = validate(val_data, model, epoch)                               
+    val_loss = validate(valid_data, model, epoch)                               
                                    
 for param in model.module.parameters():
     param.requires_grad = True
@@ -262,5 +256,5 @@ for epoch in range(300):
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
-    val_loss = validate(val_data, model, epoch)   
+    val_loss = validate(valid_data, model, epoch)   
     lr_scheduler.step(val_loss)                                  

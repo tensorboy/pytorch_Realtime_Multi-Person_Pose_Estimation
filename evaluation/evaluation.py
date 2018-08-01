@@ -1,6 +1,6 @@
 import unittest
 import torch
-from coco_eval import run_eval
+from evaluation.coco_eval import run_eval
 from network.rtpose_vgg import get_model, use_vgg
 from torch import load
 
@@ -17,6 +17,6 @@ with torch.autograd.no_grad():
     # else using the ported C++ post-processing, which has amazing speed.
     run_eval(image_dir= '/data/coco/images/', anno_dir = '/data/coco',
         image_list_txt='./datasets/coco_data/image_info_val2014_1k.txt', 
-        model=model, preprocess='vgg', our_post_processing=False)
+        model=model, preprocess='vgg')
 
 
