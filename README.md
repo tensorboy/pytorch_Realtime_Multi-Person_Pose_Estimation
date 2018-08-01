@@ -29,6 +29,9 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - `python demo/picture_demo.py` to run the picture demo.
 - `python demo/web_demo.py` to run the web demo.
 
+## Evalute
+- `python evaluate/evaluation.py` 
+
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/`
 - Download the mask of the unlabeled person at [Dropbox](https://www.dropbox.com/s/bd9ty7b4fqd5ebf/mask.tar.gz?dl=0)
