@@ -252,8 +252,8 @@ def handle_paf_and_heat(normal_heat, flipped_heat, normal_paf, flipped_paf):
 
     return averaged_paf, averaged_heatmap
 
-
-def run_eval(model, preprocess, our_post_processing):
+        
+def run_eval(image_dir, anno_dir, image_list_txt, model, preprocess):
     """Run the evaluation on the test set and report mAP score
     :param model: the model to test
     :returns: float, the reported mAP score
@@ -261,12 +261,10 @@ def run_eval(model, preprocess, our_post_processing):
     # This txt file is fount in the caffe_rtpose repository:
     # https://github.com/CMU-Perceptual-Computing-Lab/caffe_rtpose/blob/master
     img_ids, img_paths, img_heights, img_widths = get_coco_val(
-        './evaluation/coco_data/image_info_val2014_1k.txt')
+        image_list_txt)
     # img_ids = img_ids[81:82]
     # img_paths = img_paths[81:82]
     print("Total number of validation images {}".format(len(img_ids)))
-    anno_dir = '/data/coco/coco'
-    image_dir = '/data/coco/images/'
 
     # iterate all val images
     outputs = []
@@ -296,7 +294,7 @@ def run_eval(model, preprocess, our_post_processing):
         # choose which post-processing to use, our_post_processing
         # got slightly higher AP but is slow.
         param = {'thre1': 0.1, 'thre2': 0.05, 'thre3': 0.5}
-        canvas, to_plot, candidate, subset = paf_to_pose(
+        canvas, to_plot, candidate, subset = decode_pose(
             oriImg, param, heatmap, paf)
 
         # subset indicated how many peoples foun in this image.

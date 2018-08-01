@@ -1,12 +1,12 @@
 import unittest
 import torch
-from evaluation.coco_eval import run_eval
+from evaluate.coco_eval import run_eval
 from network.rtpose_vgg import get_model, use_vgg
 from torch import load
 
 with torch.autograd.no_grad():
     # this path is with respect to the root of the project
-    weight_name = ''
+    weight_name = './network/weight/pose_model.pth'
     model = get_model(trunk='vgg19')
 
     model.eval()
@@ -16,7 +16,7 @@ with torch.autograd.no_grad():
     # 'our_post_processing' using the ported Matlab post processing, which got slightly higher score
     # else using the ported C++ post-processing, which has amazing speed.
     run_eval(image_dir= '/data/coco/images/', anno_dir = '/data/coco',
-        image_list_txt='./datasets/coco_data/image_info_val2014_1k.txt', 
-        model=model, preprocess='vgg')
+        image_list_txt='./evaluate/image_info_val2014_1k.txt', 
+        model=model, preprocess='rtpose')
 
 
