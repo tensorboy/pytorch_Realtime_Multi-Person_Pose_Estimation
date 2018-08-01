@@ -223,9 +223,8 @@ use_vgg(model, model_path, 'vgg19')
 
 
 # Fix the VGG weights first, and then the weights will be released
-for i in range(20):
-    for param in model.module.model0[i].parameters():
-        param.requires_grad = False
+for param in model.module.model0[i].parameters():
+    param.requires_grad = False
 
 trainable_vars = [param for param in model.parameters() if param.requires_grad]
 optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
@@ -234,7 +233,7 @@ optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
                            nesterov=nesterov)
                                    
                                                                
-for epoch in range(1, 10):
+for epoch in range(10):
     #adjust_learning_rate(optimizer, epoch)
 
     # train for one epoch
@@ -243,3 +242,20 @@ for epoch in range(1, 10):
     # evaluate on validation set
     val_loss = validate(val_data, model, epoch)                               
                                    
+for param in model.module.parameters():
+    param.requires_grad = True
+
+trainable_vars = [param for param in model.parameters() if param.requires_grad]
+optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
+                           momentum=momentum,
+                           weight_decay=weight_decay,
+                           nesterov=nesterov)                                   
+
+for epoch in range(300):
+    #adjust_learning_rate(optimizer, epoch)
+
+    # train for one epoch
+    train_loss = train(train_data, model, optimizer, epoch)
+
+    # evaluate on validation set
+    val_loss = validate(val_data, model, epoch)                                     
