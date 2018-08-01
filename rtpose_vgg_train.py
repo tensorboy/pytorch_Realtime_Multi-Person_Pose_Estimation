@@ -7,7 +7,6 @@ from network.rtpose_vgg import get_model, use_vgg
 data_dir = '/data/coco/images'
 mask_dir = '/data/coco/'
 json_path = '/data/coco/COCO.json'
-trunk = 'vgg19'
 opt = 'sgd'
 momentum = 0.9
 weight_decay = 0.000
@@ -18,22 +17,21 @@ feat_stride = 8
 model_path = './models/'
 
 # Set Training parameters
-params = Trainer.TrainParams()
-params.exp_name = 'original_rtpose'
-params.save_dir = '/extra/tensorboy/models/{}'.format(params.exp_name)
-params.ckpt = None  # checkpoint file to load
-params.re_init = False
+exp_name = 'original_rtpose'
+save_dir = '/extra/tensorboy/models/{}'.format(params.exp_name)
+ckpt = None  # checkpoint file to load
+re_init = False
 
-params.max_epoch = 30
-params.lr_decay_epoch = {30, 60, 90, 120, 150, 180}
-params.init_lr = 2e-4
-params.lr_decay = 0.8
+max_epoch = 30
+lr_decay_epoch = {30, 60, 90, 120, 150, 180}
+init_lr = 2e-4
+lr_decay = 0.8
 
-params.gpus = [2, 3]
-params.batch_size = 20 * len(params.gpus)
-params.val_nbatch = 2
-params.val_nbatch_epoch = 100
-params.save_freq = 3000
+gpus = [2, 3]
+batch_size = 20 * len(params.gpus)
+val_nbatch = 2
+val_nbatch_epoch = 100
+save_freq = 3000
 
 
 print("Loading dataset...")
@@ -53,7 +51,7 @@ if params.val_nbatch > 0:
     print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
-model = get_model(trunk=trunk)
+model = get_model(trunk='vgg19')
 
 # load pretrained
 if params.ckpt is None:
@@ -70,3 +68,9 @@ params.optimizer = torch.optim.SGD(trainable_vars, lr=params.init_lr,
                                    momentum=momentum,
                                    weight_decay=weight_decay,
                                    nesterov=nesterov)
+                                   
+                                   
+                                   
+                                   
+                                   
+                                   

@@ -9,9 +9,7 @@ import argparse
 import matplotlib
 import numpy as np
 import pylab as plt
-import util
 import torch
-import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
