@@ -10,38 +10,6 @@ import torch.utils.model_zoo as model_zoo
 from torch.autograd import Variable
 from torch.nn import init
 
-
-def conv_bn(inp, oup, stride):
-    """Implementation of Batch Normalization Layers
-    Args:
-        inp: int, the number of input channels
-        oup: int, the number of output channels
-        stride: int, the stride (padding) of the convolution
-    Returns:
-        a sequential module defining the new layer
-    """
-    return nn.Sequential(nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-                         nn.BatchNorm2d(oup),
-                         nn.ReLU(inplace=True))
-
-
-def conv_dw(inp, oup, stride):
-    """Implementation of Separable Convolution Layers
-    Args:
-        inp: int, the number of input channels
-        oup: int, the number of output channels
-        stride: int, the stride (padding) of the convolution
-    Returns:
-        a sequential module defining the new layer
-    """
-    return nn.Sequential(nn.Conv2d(inp, inp, 3, stride, 1, groups=inp,
-                                   bias=False),
-                         nn.BatchNorm2d(inp),
-                         nn.ReLU(inplace=True),
-                         nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-                         nn.BatchNorm2d(oup), nn.ReLU(inplace=True))
-
-
 def make_stages(cfg_dict):
     """Builds CPM stages from a dictionary
     Args:
@@ -235,7 +203,7 @@ def get_model(trunk='vgg19'):
                 if isinstance(m, nn.Conv2d):
                     init.normal_(m.weight, std=0.01)
                     if m.bias is not None:  # mobilenet conv2d doesn't add bias
-                        init.constant(m.bias, 0.0)
+                        init.constant_(m.bias, 0.0)
 
             # last layer of these block don't have Relu
             init.normal_(self.model1_1[8].weight, std=0.01)
@@ -252,61 +220,6 @@ def get_model(trunk='vgg19'):
             init.normal_(self.model4_2[12].weight, std=0.01)
             init.normal_(self.model5_2[12].weight, std=0.01)
             init.normal_(self.model6_2[12].weight, std=0.01)
-
-
-        @staticmethod
-        def build_loss(saved_for_loss, heat_temp, heat_weight,
-                       vec_temp, vec_weight, batch_size, gpus):
-
-            names = build_names()
-            saved_for_log = OrderedDict()
-#            criterion = nn.MSELoss(size_average=False).cuda(gpus[0])
-            criterion = nn.MSELoss(size_average=True).cuda()
-            total_loss = 0
-#            div1 = (torch.sum(vec_weight.data > 0) + 1) / 1000.
-#            div2 = (torch.sum(heat_weight.data > 0) + 1) / 1000.
-            div1 = 1.
-            div2 = 1.
-
-            for j in range(6):
-                pred1 = saved_for_loss[2 * j] * vec_weight
-                """
-                print("pred1 sizes")
-                print(saved_for_loss[2*j].data.size())
-                print(vec_weight.data.size())
-                print(vec_temp.data.size())
-                """
-                gt1 = vec_temp * vec_weight
-
-                pred2 = saved_for_loss[2 * j + 1] * heat_weight
-                gt2 = heat_weight * heat_temp
-                """
-                print("pred2 sizes")
-                print(saved_for_loss[2*j+1].data.size())
-                print(heat_weight.data.size())
-                print(heat_temp.data.size())
-                """
-
-                # Compute losses
-                loss1 = criterion(pred1, gt1) / div1
-                loss2 = criterion(pred2, gt2) / div2
-
-                total_loss += loss1
-                total_loss += loss2
-                # print(total_loss)
-
-                # Get value from Variable and save for log
-                saved_for_log[names[2 * j]] = loss1.data[0]
-                saved_for_log[names[2 * j + 1]] = loss2.data[0]
-
-            saved_for_log['max_ht'] = torch.max(
-                saved_for_loss[-1].data[:, 0:-1, :, :])
-            saved_for_log['min_ht'] = torch.min(
-                saved_for_loss[-1].data[:, 0:-1, :, :])
-            saved_for_log['max_paf'] = torch.max(saved_for_loss[-2].data)
-            saved_for_log['min_paf'] = torch.min(saved_for_loss[-2].data)
-
-            return total_loss, saved_for_log
 
     model = rtpose_model(models)
     return model
@@ -345,24 +258,10 @@ def use_vgg(model, model_path, trunk):
     weights_load = {}
     # weight+bias,weight+bias.....(repeat 10 times)
     for i in range(number_weight[trunk]):
-        weights_load[model.state_dict().keys()[i]
-                     ] = vgg_state_dict[vgg_keys[i]]
+        weights_load[list(model.state_dict().keys())[i]
+                     ] = vgg_state_dict[list(vgg_keys)[i]]
 
     state = model.state_dict()
     state.update(weights_load)
     model.load_state_dict(state)
     print('load imagenet pretrained model: {}'.format(model_path))
-
-
-
-def build_names():
-    names = []
-
-    for j in range(1, 7):
-        for k in range(1, 3):
-            names.append('loss_stage%d_L%d' % (j, k))
-    return names
-
-
-def make_variable(tensor, async=False):
-    return Variable(tensor).cuda(async=async)

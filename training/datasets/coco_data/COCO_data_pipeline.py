@@ -5,11 +5,11 @@ import cv2
 import numpy as np
 
 import torch
-from datasets.coco_data.heatmap import putGaussianMaps
-from datasets.coco_data.ImageAugmentation import (aug_croppad, aug_flip,
+from training.datasets.coco_data.heatmap import putGaussianMaps
+from training.datasets.coco_data.ImageAugmentation import (aug_croppad, aug_flip,
                                                   aug_rotate, aug_scale)
-from datasets.coco_data.paf import putVecMaps
-from datasets.coco_data.preprocessing import (inception_preprocess,
+from training.datasets.coco_data.paf import putVecMaps
+from training.datasets.coco_data.preprocessing import (inception_preprocess,
                                               rtpose_preprocess,
                                               ssd_preprocess, vgg_preprocess)
 from torch.utils.data import DataLoader, Dataset
