@@ -2,6 +2,7 @@ import time
 from collections import OrderedDict
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from training.datasets.coco import get_loader
 from network.rtpose_vgg import get_model, use_vgg
 
@@ -223,8 +224,9 @@ use_vgg(model, model_path, 'vgg19')
 
 
 # Fix the VGG weights first, and then the weights will be released
-for param in model.module.model0[i].parameters():
-    param.requires_grad = False
+for i in range(20):
+    for param in model.module.model0[i].parameters():
+        param.requires_grad = False
 
 trainable_vars = [param for param in model.parameters() if param.requires_grad]
 optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
@@ -249,7 +251,9 @@ trainable_vars = [param for param in model.parameters() if param.requires_grad]
 optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
                            momentum=momentum,
                            weight_decay=weight_decay,
-                           nesterov=nesterov)                                   
+                           nesterov=nesterov)          
+                                                    
+lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
 for epoch in range(300):
     #adjust_learning_rate(optimizer, epoch)
@@ -258,4 +262,5 @@ for epoch in range(300):
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
-    val_loss = validate(val_data, model, epoch)                                     
+    val_loss = validate(val_data, model, epoch)   
+    lr_scheduler.step(val_loss)                                  
