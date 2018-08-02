@@ -98,11 +98,11 @@ def get_loss(saved_for_loss, heat_temp, heat_weight,
         saved_for_log[names[2 * j + 1]] = loss2.item()
 
     saved_for_log['max_ht'] = torch.max(
-        saved_for_loss[-1].data[:, 0:-1, :, :])
+        saved_for_loss[-1].data[:, 0:-1, :, :]).item()
     saved_for_log['min_ht'] = torch.min(
-        saved_for_loss[-1].data[:, 0:-1, :, :])
-    saved_for_log['max_paf'] = torch.max(saved_for_loss[-2].data)
-    saved_for_log['min_paf'] = torch.min(saved_for_loss[-2].data)
+        saved_for_loss[-1].data[:, 0:-1, :, :]).item()
+    saved_for_log['max_paf'] = torch.max(saved_for_loss[-2].data).item()
+    saved_for_log['min_paf'] = torch.min(saved_for_loss[-2].data).item()
 
     return total_loss, saved_for_log
          
@@ -111,7 +111,16 @@ def train(train_loader, model, optimizer, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
+    
+    meter_dict = {}
+    for name in build_names():
+        meter_dict[name] = AverageMeter()
+    meter_dict['max_ht'] = AverageMeter()
+    meter_dict['min_ht'] = AverageMeter()    
+    meter_dict['max_paf'] = AverageMeter()    
+    meter_dict['min_paf'] = AverageMeter()
+    
+    
     # switch to train mode
     model.train()
 
@@ -132,7 +141,9 @@ def train(train_loader, model, optimizer, epoch):
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, heat_mask,
                paf_target, paf_mask)
         
-        losses.update(total_loss.item(), img.size(0))
+        for name,_ in meter_dict.items():
+            meter_dict[name].update(saved_for_log[name], img.size(0))
+        losses.update(total_loss, img.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -143,20 +154,27 @@ def train(train_loader, model, optimizer, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
         if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
-                   epoch, i, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses))
+            print_string = 'Epoch: [{0}][{1}/{2}]\t'.format(epoch, i, len(train_loader))
+            print_string +='Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format( data_time=data_time)
+            print_string += 'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(loss=losses)
 
+            for name, value in meter_dict.items():
+                print_string+='{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
+            print(print_string)
     return losses.avg  
         
 def validate(val_loader, model, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
+    
+    meter_dict = {}
+    for name in build_names():
+        meter_dict[name] = AverageMeter()
+    meter_dict['max_ht'] = AverageMeter()
+    meter_dict['min_ht'] = AverageMeter()    
+    meter_dict['max_paf'] = AverageMeter()    
+    meter_dict['min_paf'] = AverageMeter()
     # switch to train mode
     model.train()
 
@@ -176,7 +194,10 @@ def validate(val_loader, model, epoch):
         
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, heat_mask,
                paf_target, paf_mask)
-
+               
+        for name,_ in meter_dict.items():
+            meter_dict[name].update(saved_for_log[name], img.size(0))
+            
         losses.update(total_loss.item(), img.size(0))
 
         # compute gradient and do SGD step
@@ -188,12 +209,14 @@ def validate(val_loader, model, epoch):
         batch_time.update(time.time() - end)
         end = time.time()  
         if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
-                   epoch, i, len(val_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses))        
+            print_string = 'Epoch: [{0}][{1}/{2}]\t'.format(epoch, i, len(val_loader))
+            print_string +='Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format( data_time=data_time)
+            print_string += 'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(loss=losses)
+
+            for name, value in meter_dict.items():
+                print_string+='{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
+            print(print_string)
+                
     return losses.avg
 
 class AverageMeter(object):
