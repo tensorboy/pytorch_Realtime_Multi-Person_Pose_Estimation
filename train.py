@@ -44,7 +44,7 @@ parser.add_argument('-b', '--batch_size', default=80, type=int,
 
 parser.add_argument('--print_freq', default=20, type=int, metavar='N',
                     help='number of iterations to print the training statistics')
-      
+from tensorboardX import SummaryWriter      
 args = parser.parse_args()                    
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
@@ -127,6 +127,10 @@ def train(train_loader, model, optimizer, epoch):
     end = time.time()
     for i, (img, heatmap_target, heat_mask, paf_target, paf_mask) in enumerate(train_loader):
         # measure data loading time
+        #writer.add_text('Text', 'text logged at step:' + str(i), i)
+        
+        #for name, param in model.named_parameters():
+        #    writer.add_histogram(name, param.clone().cpu().data.numpy(),i)        
         data_time.update(time.time() - end)
 
         img = img.cuda()
@@ -195,8 +199,8 @@ def validate(val_loader, model, epoch):
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, heat_mask,
                paf_target, paf_mask)
                
-        for name,_ in meter_dict.items():
-            meter_dict[name].update(saved_for_log[name], img.size(0))
+        #for name,_ in meter_dict.items():
+        #    meter_dict[name].update(saved_for_log[name], img.size(0))
             
         losses.update(total_loss.item(), img.size(0))
 
@@ -268,14 +272,17 @@ optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
                            momentum=args.momentum,
                            weight_decay=args.weight_decay,
                            nesterov=args.nesterov)
-                                                                                                 
+ 
+writer = SummaryWriter()                                                                                                 
 for epoch in range(5):
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
-    val_loss = validate(valid_data, model, epoch)                               
-            
+    val_loss = validate(valid_data, model, epoch)  
+                                 
+    writer.add_scalars('data/scalar_group', {'train loss': train_loss.avg,
+                                             'val loss': val_loss.avg}, epoch)            
 # Release all weights                                   
 for param in model.module.parameters():
     param.requires_grad = True
@@ -289,17 +296,25 @@ optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
 best_val_loss = np.inf
+
+
 model_save_filename = './network/weight/best_pose.pth'
-for epoch in range(args.epoch):
+for epoch in range(5, args.epoch):
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
     val_loss = validate(valid_data, model, epoch)   
+    
+    writer.add_scalars('data/scalar_group', {'train loss': train_loss.avg,
+                                             'val loss': val_loss.avg}, epoch)
     lr_scheduler.step(val_loss)                        
     
     is_best = val_loss<best_val_loss
     best_val_loss = max(val_loss, best_val_loss)
     if is_best:
-        torch.save(model.state_dict(), model_save_filename)          
+        torch.save(model.state_dict(), model_save_filename)      
+        
+writer.export_scalars_to_json(os.path.join(args.model_path,"/tensorboard/all_scalars.json"))
+writer.close()    

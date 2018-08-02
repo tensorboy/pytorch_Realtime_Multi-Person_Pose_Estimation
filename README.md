@@ -22,6 +22,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 1. [Pytorch](http://pytorch.org/)
 2. [Caffe](http://caffe.berkeleyvision.org/) is required if you want convert caffe model to a pytorch model.
 3. pip install pycocotools
+4. pip install tensorboardX
 
 ## Demo
 - Download [converted pytorch model](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
