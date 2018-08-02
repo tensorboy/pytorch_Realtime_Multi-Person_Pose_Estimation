@@ -16,7 +16,7 @@ parser.add_argument('--data_dir', default='/data/coco/images', type=str, metavar
                     help='path to where coco images stored') 
 parser.add_argument('--mask_dir', default='/data/coco/', type=str, metavar='DIR',
                     help='path to where coco images stored')    
- parser.add_argument('--log_dir', default='/extra/tensorboy', type=str, metavar='DIR',
+parser.add_argument('--logdir', default='/extra/tensorboy', type=str, metavar='DIR',
                     help='path to where tensorboard log restore')                                       
 parser.add_argument('--json_path', default='/data/coco/COCO.json', type=str, metavar='PATH',
                     help='path to where coco images stored')                                      
