@@ -232,7 +232,7 @@ print('val dataset len: {}'.format(len(valid_data.dataset)))
 model = get_model(trunk='vgg19')
 model = torch.nn.DataParallel(model).cuda()
 # load pretrained
-use_vgg(model, model_path, 'vgg19')
+use_vgg(model, args.model_path, 'vgg19')
 
 
 # Fix the VGG weights first, and then the weights will be released
