@@ -1,36 +1,53 @@
+import argparse
 import time
+import os
 from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from training.datasets.coco import get_loader
+
 from network.rtpose_vgg import get_model, use_vgg
+from training.datasets.coco import get_loader
 
 # Hyper-params
-data_dir = '/data/coco/images'
-mask_dir = '/data/coco/'
-json_path = '/data/coco/COCO.json'
-opt = 'sgd'
-momentum = 0.9
-weight_decay = 0.000
-nesterov = True
-inp_size = 368
-feat_stride = 8
+parser = argparse.ArgumentParser(description='PyTorch rtpose Training')
+parser.add_argument('--data_dir', default='/data/coco/images', type=str, metavar='DIR',
+                    help='path to where coco images stored') 
+parser.add_argument('--mask_dir', default='/data/coco/', type=str, metavar='DIR',
+                    help='path to where coco images stored')                     
+parser.add_argument('--json_path', default='/data/coco/COCO.json', type=str, metavar='PATH',
+                    help='path to where coco images stored')                                      
 
-model_path = './network/weight/'
+parser.add_argument('--model_path', default='./network/weight/', type=str, metavar='DIR',
+                    help='path to where the model saved') 
+                    
+parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+                    metavar='LR', help='initial learning rate')
 
-# Set Training parameters
-exp_name = 'original_rtpose'
-save_dir = '/extra/tensorboy/models/{}'.format(exp_name)
+parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                    help='momentum')
+ 
+parser.add_argument('--epochs', default=90, type=int, metavar='N',
+                    help='number of total epochs to run')
+                    
+parser.add_argument('--weight-decay', '--wd', default=0.000, type=float,
+                    metavar='W', help='weight decay (default: 1e-4)')  
+parser.add_argument('--nesterov', dest='nesterov', action='store_true')     
+                                                   
+parser.add_argument('-o', '--optim', default='sgd', type=str)
+#Device options
+parser.add_argument('--gpu', default='0', type=str,
+                    help='id(s) for CUDA_VISIBLE_DEVICES')
+parser.add_argument('-b', '--batch_size', default=80, type=int,
+                    metavar='N', help='mini-batch size (default: 256)')
 
-max_epoch = 30
-lr_decay_epoch = {30, 60, 90, 120, 150, 180}
-init_lr = 0.1
-lr_decay = 0.8
+parser.add_argument('--print_freq', default=20, type=int, metavar='N',
+                    help='number of iterations to print the training statistics')
+      
+args = parser.parse_args()                    
+os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
-gpus = [0,1, 2, 3]
-batch_size = 20 * len(gpus)
-print_freq = 20
 
 def build_names():
     names = []
@@ -125,7 +142,7 @@ def train(train_loader, model, optimizer, epoch):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if i % print_freq == 0:
+        if i % args.print_freq == 0:
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -170,6 +187,13 @@ def validate(val_loader, model, epoch):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()  
+        if i % args.print_freq == 0:
+            print('Epoch: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
+                   epoch, i, len(val_loader), batch_time=batch_time,
+                   data_time=data_time, loss=losses))        
     return losses.avg
 
 class AverageMeter(object):
@@ -190,24 +214,18 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def adjust_learning_rate(optimizer, epoch):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
 print("Loading dataset...")
 # load data
-train_data = get_loader(json_path, data_dir,
-                        mask_dir, inp_size, feat_stride,
-                        'vgg', batch_size,
+train_data = get_loader(args.json_path, args.data_dir,
+                        args.mask_dir, 368, 8,
+                        'vgg', args.batch_size,
                         shuffle=True, training=True)
 print('train dataset len: {}'.format(len(train_data.dataset)))
 
 # validation data
-valid_data = get_loader(json_path, data_dir, mask_dir, inp_size,
-                            feat_stride, preprocess='vgg', training=False,
-                            batch_size=batch_size, shuffle=True)
+valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 368,
+                            8, preprocess='vgg', training=False,
+                            batch_size=args.batch_size, shuffle=True)
 print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
@@ -223,14 +241,12 @@ for i in range(20):
         param.requires_grad = False
 
 trainable_vars = [param for param in model.parameters() if param.requires_grad]
-optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
-                           momentum=momentum,
-                           weight_decay=weight_decay,
-                           nesterov=nesterov)
+optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                           momentum=args.momentum,
+                           weight_decay=args.weight_decay,
+                           nesterov=args.nesterov)
                                                                                                  
 for epoch in range(5):
-    #adjust_learning_rate(optimizer, epoch)
-
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
 
@@ -242,16 +258,16 @@ for param in model.module.parameters():
     param.requires_grad = True
 
 trainable_vars = [param for param in model.parameters() if param.requires_grad]
-optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
-                           momentum=momentum,
-                           weight_decay=weight_decay,
-                           nesterov=nesterov)          
+optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                           momentum=args.momentum,
+                           weight_decay=args.weight_decay,
+                           nesterov=args.nesterov)          
                                                     
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
 best_val_loss = np.inf
 model_save_filename = './network/weight/best_pose.pth'
-for epoch in range(300):
+for epoch in range(args.epoch):
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)

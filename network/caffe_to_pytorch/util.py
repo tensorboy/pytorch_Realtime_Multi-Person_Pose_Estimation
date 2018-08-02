@@ -1,7 +1,9 @@
-import numpy as np
 from cStringIO import StringIO
+
+import numpy as np
 import PIL.Image
 from IPython.display import Image, display
+
 
 def showBGRimage(a, fmt='jpeg'):
     a = np.uint8(np.clip(a, 0, 255))
@@ -78,4 +80,3 @@ def padRightDownCorner(img, stride, padValue):
 
 #if __name__ == "__main__":
 #    config_reader()
-

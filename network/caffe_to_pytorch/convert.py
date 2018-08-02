@@ -1,20 +1,22 @@
-import torch.nn as nn
-import torch.utils.model_zoo as model_zoo
 import math
 import os
-import sys
 import re
+import sys
 import time
+from collections import OrderedDict
+
 import numpy as np
 import skimage.io
-import cv2
-import caffe
-import util
-from collections import OrderedDict
-from config_reader import config_reader
 import torch
-from torch.autograd import Variable
+import torch.nn as nn
 import torch.nn.functional as F
+import torch.utils.model_zoo as model_zoo
+from torch.autograd import Variable
+
+import caffe
+import cv2
+import util
+from config_reader import config_reader
 
 caffemodel = '../model/_trained_COCO/pose_iter_440000.caffemodel'
 deployFile = '../model/_trained_COCO/pose_deploy.prototxt'
@@ -215,6 +217,3 @@ for m in range(len(multiplier)):
 
 
 torch.save(model.state_dict(), '../model/pose_model.pth')    
-
-      
-

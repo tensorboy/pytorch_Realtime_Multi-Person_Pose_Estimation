@@ -1,5 +1,6 @@
-from configobj import ConfigObj
 import numpy as np
+
+from configobj import ConfigObj
 
 
 def config_reader():
