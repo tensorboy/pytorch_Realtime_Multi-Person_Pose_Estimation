@@ -15,7 +15,9 @@ parser = argparse.ArgumentParser(description='PyTorch rtpose Training')
 parser.add_argument('--data_dir', default='/data/coco/images', type=str, metavar='DIR',
                     help='path to where coco images stored') 
 parser.add_argument('--mask_dir', default='/data/coco/', type=str, metavar='DIR',
-                    help='path to where coco images stored')                     
+                    help='path to where coco images stored')    
+ parser.add_argument('--log_dir', default='/extra/tensorboy', type=str, metavar='DIR',
+                    help='path to where tensorboard log restore')                                       
 parser.add_argument('--json_path', default='/data/coco/COCO.json', type=str, metavar='PATH',
                     help='path to where coco images stored')                                      
 
@@ -273,7 +275,8 @@ optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
                            weight_decay=args.weight_decay,
                            nesterov=args.nesterov)
  
-writer = SummaryWriter()                                                                                                 
+writer = SummaryWriter(log_dir=args.log_dir)       
+                                                                                          
 for epoch in range(5):
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
