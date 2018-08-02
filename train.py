@@ -227,8 +227,7 @@ optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
                            momentum=momentum,
                            weight_decay=weight_decay,
                            nesterov=nesterov)
-                                   
-                                                               
+                                                                                                 
 for epoch in range(5):
     #adjust_learning_rate(optimizer, epoch)
 
@@ -237,7 +236,8 @@ for epoch in range(5):
 
     # evaluate on validation set
     val_loss = validate(valid_data, model, epoch)                               
-                                   
+            
+# Release all weights                                   
 for param in model.module.parameters():
     param.requires_grad = True
 
@@ -249,12 +249,18 @@ optimizer = torch.optim.SGD(trainable_vars, lr=init_lr,
                                                     
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
+best_val_loss = np.inf
+model_save_filename = './network/weight/best_pose.pth'
 for epoch in range(300):
-    #adjust_learning_rate(optimizer, epoch)
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
 
     # evaluate on validation set
     val_loss = validate(valid_data, model, epoch)   
-    lr_scheduler.step(val_loss)                                  
+    lr_scheduler.step(val_loss)                        
+    
+    is_best = val_loss<best_val_loss
+    best_val_loss = max(val_loss, best_val_loss)
+    if is_best:
+        torch.save(model.state_dict(), model_save_filename)          

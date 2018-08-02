@@ -45,7 +45,8 @@ def eval_coco(outputs, dataDir, imgIds):
     :param imgIds: list, all the image ids in the validation set
     :returns : float, the mAP score
     """
-
+    with open('results.json', 'w') as f:
+        json.dump(outputs, f)  
     annType = 'keypoints'
     prefix = 'person_keypoints'
 
@@ -53,7 +54,7 @@ def eval_coco(outputs, dataDir, imgIds):
     dataType = 'val2014'
     annFile = '%s/annotations/%s_%s.json' % (dataDir, prefix, dataType)
     cocoGt = COCO(annFile)  # load annotations
-    cocoDt = cocoGt.loadRes(outputs)  # load model outputs
+    cocoDt = cocoGt.loadRes('results.json')  # load model outputs
 
     # running evaluation
     cocoEval = COCOeval(cocoGt, cocoDt, annType)
