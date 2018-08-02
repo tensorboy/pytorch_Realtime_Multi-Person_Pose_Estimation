@@ -275,7 +275,7 @@ optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
                            weight_decay=args.weight_decay,
                            nesterov=args.nesterov)
  
-writer = SummaryWriter(log_dir=args.log_dir)       
+writer = SummaryWriter(log_dir=args.logdir)       
                                                                                           
 for epoch in range(5):
     # train for one epoch
