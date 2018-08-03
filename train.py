@@ -307,7 +307,7 @@ best_val_loss = np.inf
 
 
 model_save_filename = './network/weight/best_pose.pth'
-for epoch in range(5, args.epoch):
+for epoch in range(5, args.epochs):
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)
