@@ -284,8 +284,8 @@ for epoch in range(5):
     # evaluate on validation set
     val_loss = validate(valid_data, model, epoch)  
                                  
-    writer.add_scalars('data/scalar_group', {'train loss': train_loss.avg,
-                                             'val loss': val_loss.avg}, epoch)            
+    writer.add_scalars('data/scalar_group', {'train loss': train_loss,
+                                             'val loss': val_loss}, epoch)            
 # Release all weights                                   
 for param in model.module.parameters():
     param.requires_grad = True
@@ -310,8 +310,8 @@ for epoch in range(5, args.epoch):
     # evaluate on validation set
     val_loss = validate(valid_data, model, epoch)   
     
-    writer.add_scalars('data/scalar_group', {'train loss': train_loss.avg,
-                                             'val loss': val_loss.avg}, epoch)
+    writer.add_scalars('data/scalar_group', {'train loss': train_loss,
+                                             'val loss': val_loss}, epoch)
     lr_scheduler.step(val_loss)                        
     
     is_best = val_loss<best_val_loss
