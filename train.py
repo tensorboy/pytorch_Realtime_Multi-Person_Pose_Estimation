@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+#import encoding
 from network.rtpose_vgg import get_model, use_vgg
 from training.datasets.coco import get_loader
 
@@ -40,17 +41,18 @@ parser.add_argument('--nesterov', dest='nesterov', action='store_true')
                                                    
 parser.add_argument('-o', '--optim', default='sgd', type=str)
 #Device options
-parser.add_argument('--gpu', default='0', type=str,
-                    help='id(s) for CUDA_VISIBLE_DEVICES')
+parser.add_argument('--gpu_ids', dest='gpu_ids', help='which gpu to use', nargs="+",
+                    default=[0,1,2,3], type=int)
+                    
 parser.add_argument('-b', '--batch_size', default=80, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 
 parser.add_argument('--print_freq', default=20, type=int, metavar='N',
                     help='number of iterations to print the training statistics')
 from tensorboardX import SummaryWriter      
-args = parser.parse_args()                    
-os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-
+args = parser.parse_args()  
+               
+os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in args.gpu_ids)
 
 def build_names():
     names = []
@@ -67,6 +69,7 @@ def get_loss(saved_for_loss, heat_temp, heat_weight,
     names = build_names()
     saved_for_log = OrderedDict()
     criterion = nn.MSELoss(size_average=True).cuda()
+    #criterion = encoding.nn.DataParallelCriterion(criterion, device_ids=args.gpu_ids)
     total_loss = 0
 
     for j in range(6):
@@ -260,6 +263,7 @@ print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
 model = get_model(trunk='vgg19')
+#model = encoding.nn.DataParallelModel(model, device_ids=args.gpu_ids)
 model = torch.nn.DataParallel(model).cuda()
 # load pretrained
 use_vgg(model, args.model_path, 'vgg19')
