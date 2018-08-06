@@ -324,5 +324,5 @@ for epoch in range(5, args.epochs):
     if is_best:
         torch.save(model.state_dict(), model_save_filename)      
         
-writer.export_scalars_to_json(os.path.join(args.model_path,"/tensorboard/all_scalars.json"))
+writer.export_scalars_to_json(os.path.join(args.model_path,"tensorboard/all_scalars.json"))
 writer.close()    
