@@ -21,15 +21,10 @@ from training.datasets.coco_data.preprocessing import (inception_preprocess,
                                               rtpose_preprocess,
                                               ssd_preprocess, vgg_preprocess)
 from network import im_transform
-from evaluate.coco_eval import get_multiplier, get_outputs
-#parser = argparse.ArgumentParser()
-#parser.add_argument('--t7_file', required=True)
-#parser.add_argument('--pth_file', required=True)
-#args = parser.parse_args()
+from evaluate.coco_eval import get_multiplier, get_outputs, handle_paf_and_heat
 
-torch.set_num_threads(torch.get_num_threads())
+
 weight_name = './network/weight/pose_model.pth'
-
 
 model = get_model('vgg19')     
 model.load_state_dict(torch.load(weight_name))
@@ -47,10 +42,18 @@ shape_dst = np.min(oriImg.shape[0:2])
 multiplier = get_multiplier(oriImg)
 
 with torch.no_grad():
-    paf, heatmap = get_outputs(
+    orig_paf, orig_heat = get_outputs(
         multiplier, oriImg, model,  'rtpose')
           
+    # Get results of flipped image
+    swapped_img = oriImg[:, ::-1, :]
+    flipped_paf, flipped_heat = get_outputs(multiplier, swapped_img,
+                                            model, 'rtpose')
 
+    # compute averaged heatmap and paf
+    paf, heatmap = handle_paf_and_heat(
+        orig_heat, flipped_heat, orig_paf, flipped_paf)
+            
 param = {'thre1': 0.1, 'thre2': 0.05, 'thre3': 0.5}
 canvas, to_plot, candidate, subset = decode_pose(
     oriImg, param, heatmap, paf)

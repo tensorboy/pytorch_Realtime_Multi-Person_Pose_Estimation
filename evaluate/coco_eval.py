@@ -63,7 +63,7 @@ def eval_coco(outputs, dataDir, imgIds):
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
-
+    os.remove('results.json')
     # return Average Precision
     return cocoEval.stats[0]
 
@@ -255,7 +255,7 @@ def handle_paf_and_heat(normal_heat, flipped_heat, normal_paf, flipped_paf):
     return averaged_paf, averaged_heatmap
 
         
-def run_eval(image_dir, anno_dir, image_list_txt, model, preprocess):
+def run_eval(image_dir, anno_dir, vis_dir, image_list_txt, model, preprocess):
     """Run the evaluation on the test set and report mAP score
     :param model: the model to test
     :returns: float, the reported mAP score
@@ -298,7 +298,9 @@ def run_eval(image_dir, anno_dir, image_list_txt, model, preprocess):
         param = {'thre1': 0.1, 'thre2': 0.05, 'thre3': 0.5}
         canvas, to_plot, candidate, subset = decode_pose(
             oriImg, param, heatmap, paf)
-
+            
+        vis_path = os.path.join(vis_dir, img_paths[i])
+        cv2.imwrite(vis_path, to_plot)
         # subset indicated how many peoples foun in this image.
         append_result(img_ids[i], subset, candidate, outputs)
 
