@@ -34,6 +34,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 ## Evalute
 - `python evaluate/evaluation.py` 
+- It should have `mAP 0.598` for the original rtpose, original repo have `mAP 0.577` because we do left and right flip for heatmap and PAF for the evaluation. 
 
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/`

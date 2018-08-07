@@ -9,7 +9,8 @@ with torch.autograd.no_grad():
     weight_name = './network/weight/best_pose.pth'
     state_dict = torch.load(weight_name)
     model = get_model(trunk='vgg19')
-
+    
+    model = torch.nn.DataParallel(model).cuda()
     model.load_state_dict(state_dict)
     model.eval()
     model.float()
