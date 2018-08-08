@@ -26,13 +26,13 @@ parser.add_argument('--json_path', default='/data/coco/COCO.json', type=str, met
 parser.add_argument('--model_path', default='./network/weight/', type=str, metavar='DIR',
                     help='path to where the model saved') 
                     
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+parser.add_argument('--lr', '--learning-rate', default=1., type=float,
                     metavar='LR', help='initial learning rate')
 
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
  
-parser.add_argument('--epochs', default=90, type=int, metavar='N',
+parser.add_argument('--epochs', default=200, type=int, metavar='N',
                     help='number of total epochs to run')
                     
 parser.add_argument('--weight-decay', '--wd', default=0.000, type=float,
