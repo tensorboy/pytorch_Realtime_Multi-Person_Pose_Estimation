@@ -39,9 +39,10 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ### Pretrained Models & Performance on the dataset split by the original rtpose.
 [rtpose original](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0)
 
-|   Reported on paper| mAP in this repo | 
-|  ------     | --------- |
-|   0.577      | 0.598     | 
+|   Reported on paper (VGG19)| mAP in this repo (VGG19)| Trained from scratch in this repo| 
+|  ------     | --------- | --------- |
+|   0.577      | 0.598     |  0.599 |
+
 
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/`
