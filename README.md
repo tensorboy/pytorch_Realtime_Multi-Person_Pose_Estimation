@@ -36,6 +36,12 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - `python evaluate/evaluation.py` 
 - It should have `mAP 0.598` for the original rtpose, original repo have `mAP 0.577` because we do left and right flip for heatmap and PAF for the evaluation. 
 
+### Pretrained Models & Performance on the dataset split by the original rtpose.
+[rtpose original](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0)
+|   Reported on paper| mAP in this repo | 
+|  ------     | --------- |
+|   0.577      | 0.598     | 
+
 ## Training
 - `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/`
 - Download the mask of the unlabeled person at [Dropbox](https://www.dropbox.com/s/bd9ty7b4fqd5ebf/mask.tar.gz?dl=0)
