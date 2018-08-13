@@ -273,14 +273,14 @@ print("Loading dataset...")
 # load data
 train_data = get_loader(args.json_path, args.data_dir,
                         args.mask_dir, 368, 8,
-                        'vgg', args.batch_size,
-                        shuffle=True, training=True)
+                        'rtpose', args.batch_size,
+                        shuffle=True, training=True, num_workers=8)
 print('train dataset len: {}'.format(len(train_data.dataset)))
 
 # validation data
 valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 368,
-                            8, preprocess='vgg', training=False,
-                            batch_size=args.batch_size, shuffle=True)
+                            8, preprocess='rtpose', training=False,
+                            batch_size=args.batch_size, shuffle=False, num_workers=8)
 print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
