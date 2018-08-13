@@ -280,7 +280,7 @@ print('train dataset len: {}'.format(len(train_data.dataset)))
 # validation data
 valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 368,
                             8, preprocess='rtpose', training=False,
-                            batch_size=args.batch_size, shuffle=False, num_workers=8)
+                            batch_size=args.batch_size, shuffle=False, num_workers=4)
 print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
