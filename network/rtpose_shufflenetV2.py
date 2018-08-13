@@ -15,19 +15,20 @@ try:
 except ImportError:
     pass
 
-import slim
-from slim import g_name
+from network import slim
+from network.slim import g_name
 
 
 class BasicBlock(nn.Module):
 
-    def __init__(self, name, in_channels, out_channels, stride, dilation):
+    def __init__(self, name, in_channels, out_channels, stride, downsample, dilation):
         super(BasicBlock, self).__init__()
         self.g_name = name
         self.in_channels = in_channels
         self.stride = stride
+        self.downsample = downsample
         channels = out_channels//2
-        if stride == 1:
+        if not self.downsample and self.stride==1:
             assert in_channels == out_channels
             self.conv = nn.Sequential(
                 slim.conv_bn_relu(name + '/conv1', channels, channels, 1),
@@ -53,7 +54,7 @@ class BasicBlock(nn.Module):
         self.shuffle = slim.channel_shuffle(name + '/shuffle', 2)
 
     def forward(self, x):
-        if self.stride == 1:
+        if not self.downsample:
             x1 = x[:, :(x.shape[1]//2), :, :]
             x2 = x[:, (x.shape[1]//2):, :, :]
             x = torch.cat((x1, self.conv(x2)), 1)
@@ -78,7 +79,7 @@ class BasicBlock(nn.Module):
 
 class Network(nn.Module):
 
-    def __init__(self, num_classes, width_multiplier):
+    def __init__(self, width_multiplier):
         super(Network, self).__init__()
         width_config = {
             0.25: (24, 48, 96, 512),
@@ -89,34 +90,34 @@ class Network(nn.Module):
             2.0: (244, 488, 976, 2048),
         }
         width_config = width_config[width_multiplier]
-        self.num_classes = num_classes
         in_channels = 24
 
         # outputs, stride, dilation, blocks, type
         self.network_config = [
             g_name('data/bn', nn.BatchNorm2d(3)),
             slim.conv_bn_relu('stage1/conv', 3, in_channels, 3, 2, 1),
-            # g_name('stage1/pool', nn.MaxPool2d(3, 2, 1)),
             g_name('stage1/pool', nn.MaxPool2d(3, 2, 0, ceil_mode=True)),
             (width_config[0], 2, 1, 4, 'b'),
-            (width_config[1], 2, 1, 8, 'b'), # x16
-            (width_config[2], 2, 1, 4, 'b'), # x32
-            slim.conv_bn_relu('conv5', width_config[2], width_config[3], 1),
-            g_name('pool', nn.AvgPool2d(7, 1)),
-            g_name('fc', nn.Conv2d(width_config[3], self.num_classes, 1)),
+            (width_config[1], 1, 1, 8, 'b'), # x16
+            (width_config[2], 1, 1, 4, 'b'), # x32
+            slim.conv_bn_relu('conv5', width_config[2], width_config[3], 1)
         ]
+        self.paf = nn.Conv2d(width_config[3], 38, 1)
+        self.heatmap = nn.Conv2d(width_config[3], 19, 1)
         self.network = []
         for i, config in enumerate(self.network_config):
             if isinstance(config, nn.Module):
                 self.network.append(config)
                 continue
             out_channels, stride, dilation, num_blocks, stage_type = config
+            if stride==2:
+                downsample=True
             stage_prefix = 'stage_{}'.format(i - 1)
             blocks = [BasicBlock(stage_prefix + '_1', in_channels, 
-                out_channels, stride, dilation)]
+                out_channels, stride, downsample, dilation)]
             for i in range(1, num_blocks):
                 blocks.append(BasicBlock(stage_prefix + '_{}'.format(i + 1), 
-                    out_channels, out_channels, 1, dilation))
+                    out_channels, out_channels, 1, False, dilation))
             self.network += [nn.Sequential(*blocks)]
 
             in_channels = out_channels
@@ -131,8 +132,7 @@ class Network(nn.Module):
     def trainable_parameters(self):
         parameters = [
             {'params': self.cls_head_list.parameters(), 'lr_mult': 1.0},
-            {'params': self.loc_head_list.parameters(), 'lr_mult': 1.0},
-            # {'params': self.network.parameters(), 'lr_mult': 0.1},
+            {'params': self.loc_head_list.parameters(), 'lr_mult': 1.0}
         ]
         for i in range(len(self.network)):
             lr_mult = 0.1 if i in (0, 1, 2, 3, 4, 5) else 1
@@ -143,7 +143,9 @@ class Network(nn.Module):
 
     def forward(self, x):
         x = self.network(x)
-        return x.reshape(x.shape[0], -1)
+        PAF = self.paf(x)
+        HEAT = self.heatmap(x)
+        return [PAF, HEAT], [PAF, HEAT]
 
     def generate_caffe_prototxt(self, caffe_net, layer):
         data_layer = layer
