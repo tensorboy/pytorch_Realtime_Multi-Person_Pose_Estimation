@@ -38,7 +38,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - It should have `mAP 0.598` for the original rtpose, original repo have `mAP 0.577` because we do left and right flip for heatmap and PAF for the evaluation. 
 
 ### Pretrained Models & Performance on the dataset split by the original rtpose.
-[rtpose original](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0)
+[rtpose original](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0), [trained from scratch](https://www.dropbox.com/s/5v654d2u65fuvyr/pose_model_scratch.pth?dl=0) (Notice the preprocessing is different for different models)
 
 |   Reported on paper (VGG19)| mAP in this repo (VGG19)| Trained from scratch in this repo| 
 |  ------     | --------- | --------- |
