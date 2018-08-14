@@ -10,6 +10,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 #import encoding
 from network.rtpose_vgg import get_model, use_vgg
+from network import rtpose_shufflenetV2
+import network.rtpose_hourglass as hourglass
 from training.datasets.coco import get_loader
 
 # Hyper-params
@@ -54,75 +56,64 @@ args = parser.parse_args()
                
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in args.gpu_ids)
 
+params_transform = dict()
+params_transform['mode'] = 5
+# === aug_scale ===
+params_transform['scale_min'] = 0.5
+params_transform['scale_max'] = 1.1
+params_transform['scale_prob'] = 1
+params_transform['target_dist'] = 0.6
+# === aug_rotate ===
+params_transform['max_rotate_degree'] = 40
 
-def get_loss(saved_for_loss, heat_temp, heat_weight, vec_temp, vec_weight):
+# ===
+params_transform['center_perterb_max'] = 40
 
-    predicts = saved_for_loss[0]
+# === aug_flip ===
+params_transform['flip_prob'] = 0.5
 
-    criterion = nn.MSELoss(size_average=True).cuda()
-
-    losses_ht = []
-    losses_paf = []
-    for predict in predicts:
-        paf, ht = predict
-        losses_ht.append(criterion(ht * heat_weight, heat_temp * heat_weight) )
-        losses_paf.append(criterion(paf * vec_weight, vec_temp * vec_weight))
-
-    loss_ht = sum(losses_ht)
-    loss_paf = sum(losses_paf)
-    loss = loss_ht + loss_paf
-
-    saved_for_log = OrderedDict()
-    saved_for_log['loss'] = loss.data[0]
-    saved_for_log['loss_ht'] = loss_ht.data[0]
-    saved_for_log['loss_paf'] = loss_paf.data[0]
-    saved_for_log['max_ht'] = torch.max(predicts[-1][1].data[:,0:-1, :, :])
-    saved_for_log['min_ht'] = torch.min(predicts[-1][1].data[:,0:-1, :, :])
-    saved_for_log['max_paf'] = torch.max(predicts[-1][0].data)
-    saved_for_log['min_paf'] = torch.min(predicts[-1][0].data)
-
-    return loss, saved_for_log
+params_transform['np'] = 56
+params_transform['sigma'] = 4.416
+params_transform['limb_width'] = 1.289
 
 
 def get_loss(saved_for_loss, heat_temp, heat_weight,
                vec_temp, vec_weight):
 
-    names = build_names()
     saved_for_log = OrderedDict()
     criterion = nn.MSELoss(size_average=True).cuda()
     #criterion = encoding.nn.DataParallelCriterion(criterion, device_ids=args.gpu_ids)
     total_loss = 0
 
-    for j in range(6):
-        pred1 = saved_for_loss[2 * j] * vec_weight
-        """
-        print("pred1 sizes")
-        print(saved_for_loss[2*j].data.size())
-        print(vec_weight.data.size())
-        print(vec_temp.data.size())
-        """
-        gt1 = vec_temp * vec_weight
+    pred1 = saved_for_loss[0] * vec_weight
+    """
+    print("pred1 sizes")
+    print(saved_for_loss[2*j].data.size())
+    print(vec_weight.data.size())
+    print(vec_temp.data.size())
+    """
+    gt1 = vec_temp * vec_weight
 
-        pred2 = saved_for_loss[2 * j + 1] * heat_weight
-        gt2 = heat_weight * heat_temp
-        """
-        print("pred2 sizes")
-        print(saved_for_loss[2*j+1].data.size())
-        print(heat_weight.data.size())
-        print(heat_temp.data.size())
-        """
+    pred2 = saved_for_loss[1] * heat_weight
+    gt2 = heat_weight * heat_temp
+    """
+    print("pred2 sizes")
+    print(saved_for_loss[2*j+1].data.size())
+    print(heat_weight.data.size())
+    print(heat_temp.data.size())
+    """
 
-        # Compute losses
-        loss1 = criterion(pred1, gt1)
-        loss2 = criterion(pred2, gt2) 
+    # Compute losses
+    loss1 = criterion(pred1, gt1)
+    loss2 = criterion(pred2, gt2) 
 
-        total_loss += loss1
-        total_loss += loss2
-        # print(total_loss)
+    total_loss += loss1
+    total_loss += loss2
+    # print(total_loss)
 
-        # Get value from Variable and save for log
-        saved_for_log[names[2 * j]] = loss1.item()
-        saved_for_log[names[2 * j + 1]] = loss2.item()
+    # Get value from Variable and save for log
+    saved_for_log['paf'] = loss1.item()
+    saved_for_log['heatmap'] = loss2.item()
 
     saved_for_log['max_ht'] = torch.max(
         saved_for_loss[-1].data[:, 0:-1, :, :]).item()
@@ -140,8 +131,9 @@ def train(train_loader, model, optimizer, epoch):
     losses = AverageMeter()
     
     meter_dict = {}
-    for name in build_names():
-        meter_dict[name] = AverageMeter()
+
+    meter_dict['paf'] = AverageMeter()
+    meter_dict['heatmap'] = AverageMeter()     
     meter_dict['max_ht'] = AverageMeter()
     meter_dict['min_ht'] = AverageMeter()    
     meter_dict['max_paf'] = AverageMeter()    
@@ -200,8 +192,8 @@ def validate(val_loader, model, epoch):
     losses = AverageMeter()
     
     meter_dict = {}
-    for name in build_names():
-        meter_dict[name] = AverageMeter()
+    meter_dict['paf'] = AverageMeter()
+    meter_dict['heatmap'] = AverageMeter()    
     meter_dict['max_ht'] = AverageMeter()
     meter_dict['min_ht'] = AverageMeter()    
     meter_dict['max_paf'] = AverageMeter()    
@@ -271,50 +263,23 @@ class AverageMeter(object):
 print("Loading dataset...")
 # load data
 train_data = get_loader(args.json_path, args.data_dir,
-                        args.mask_dir, 368, 8,
-                        'vgg', args.batch_size,
-                        shuffle=True, training=True)
+                        args.mask_dir, 256, 4,
+                        'rtpose', args.batch_size,
+                        shuffle=True, params_transform=params_transform, training=True, num_workers=16)
 print('train dataset len: {}'.format(len(train_data.dataset)))
 
 # validation data
-valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 368,
-                            8, preprocess='vgg', training=False,
-                            batch_size=args.batch_size, shuffle=True)
+valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 256,
+                            4, preprocess='rtpose', params_transform=params_transform, training=False,
+                            batch_size=args.batch_size, shuffle=False, num_workers=4)
 print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model
-model = get_model(trunk='vgg19')
+model = hourglass.hg(num_stacks=8, num_blocks=1, paf_classes=38, ht_classes=19)
 #model = encoding.nn.DataParallelModel(model, device_ids=args.gpu_ids)
 model = torch.nn.DataParallel(model).cuda()
-# load pretrained
-use_vgg(model, args.model_path, 'vgg19')
-
-
-# Fix the VGG weights first, and then the weights will be released
-for i in range(20):
-    for param in model.module.model0[i].parameters():
-        param.requires_grad = False
-
-trainable_vars = [param for param in model.parameters() if param.requires_grad]
-optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
-                           momentum=args.momentum,
-                           weight_decay=args.weight_decay,
-                           nesterov=args.nesterov)
  
-writer = SummaryWriter(log_dir=args.logdir)       
-                                                                                          
-for epoch in range(5):
-    # train for one epoch
-    train_loss = train(train_data, model, optimizer, epoch)
-
-    # evaluate on validation set
-    val_loss = validate(valid_data, model, epoch)  
-                                 
-    writer.add_scalars('data/scalar_group', {'train loss': train_loss,
-                                             'val loss': val_loss}, epoch)            
-# Release all weights                                   
-for param in model.module.parameters():
-    param.requires_grad = True
+writer = SummaryWriter(log_dir=args.logdir)                                                      
 
 trainable_vars = [param for param in model.parameters() if param.requires_grad]
 optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
@@ -327,8 +292,8 @@ lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, 
 best_val_loss = np.inf
 
 
-model_save_filename = './network/weight/best_pose.pth'
-for epoch in range(5, args.epochs):
+model_save_filename = './network/weight/best_pose_SH.pth'
+for epoch in range(args.epochs):
 
     # train for one epoch
     train_loss = train(train_data, model, optimizer, epoch)

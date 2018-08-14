@@ -54,6 +54,25 @@ args = parser.parse_args()
                
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in args.gpu_ids)
 
+params_transform = dict()
+params_transform['mode'] = 5
+# === aug_scale ===
+params_transform['scale_min'] = 0.5
+params_transform['scale_max'] = 1.1
+params_transform['scale_prob'] = 1
+params_transform['target_dist'] = 0.6
+# === aug_rotate ===
+params_transform['max_rotate_degree'] = 40
+
+# ===
+params_transform['center_perterb_max'] = 40
+
+# === aug_flip ===
+params_transform['flip_prob'] = 0.5
+
+params_transform['np'] = 56
+params_transform['sigma'] = 7.0
+
 def build_names():
     names = []
 

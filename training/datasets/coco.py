@@ -13,7 +13,7 @@ from training.datasets.dataloader import sDataLoader
 
 
 def get_loader(json_path, data_dir, mask_dir, inp_size, feat_stride, preprocess,
-               batch_size, training=True, shuffle=True, num_workers=3):
+               batch_size, params_transform, training=True, shuffle=True, num_workers=3):
     """ Build a COCO dataloader
     :param json_path: string, path to jso file
     :param datadir: string, path to coco data
@@ -35,7 +35,7 @@ def get_loader(json_path, data_dir, mask_dir, inp_size, feat_stride, preprocess,
     coco_data = Cocokeypoints(root=data_dir, mask_dir=mask_dir,
                               index_list=train_indexes if training else val_indexes,
                               data=data, inp_size=inp_size, feat_stride=feat_stride,
-                              preprocess=preprocess, transform=ToTensor())
+                              preprocess=preprocess, transform=ToTensor(), params_transform=params_transform)
 
     data_loader = sDataLoader(coco_data, batch_size=batch_size,
                               shuffle=shuffle, num_workers=num_workers)

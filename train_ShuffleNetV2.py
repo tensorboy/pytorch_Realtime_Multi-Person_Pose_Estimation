@@ -55,35 +55,24 @@ args = parser.parse_args()
                
 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in args.gpu_ids)
 
+params_transform = dict()
+params_transform['mode'] = 5
+# === aug_scale ===
+params_transform['scale_min'] = 0.5
+params_transform['scale_max'] = 1.1
+params_transform['scale_prob'] = 1
+params_transform['target_dist'] = 0.6
+# === aug_rotate ===
+params_transform['max_rotate_degree'] = 40
 
-def get_loss(saved_for_loss, heat_temp, heat_weight, vec_temp, vec_weight):
+# ===
+params_transform['center_perterb_max'] = 40
 
-    predicts = saved_for_loss[0]
+# === aug_flip ===
+params_transform['flip_prob'] = 0.5
 
-    criterion = nn.MSELoss(size_average=True).cuda()
-
-    losses_ht = []
-    losses_paf = []
-    for predict in predicts:
-        paf, ht = predict
-        losses_ht.append(criterion(ht * heat_weight, heat_temp * heat_weight) )
-        losses_paf.append(criterion(paf * vec_weight, vec_temp * vec_weight))
-
-    loss_ht = sum(losses_ht)
-    loss_paf = sum(losses_paf)
-    loss = loss_ht + loss_paf
-
-    saved_for_log = OrderedDict()
-    saved_for_log['loss'] = loss.data[0]
-    saved_for_log['loss_ht'] = loss_ht.data[0]
-    saved_for_log['loss_paf'] = loss_paf.data[0]
-    saved_for_log['max_ht'] = torch.max(predicts[-1][1].data[:,0:-1, :, :])
-    saved_for_log['min_ht'] = torch.min(predicts[-1][1].data[:,0:-1, :, :])
-    saved_for_log['max_paf'] = torch.max(predicts[-1][0].data)
-    saved_for_log['min_paf'] = torch.min(predicts[-1][0].data)
-
-    return loss, saved_for_log
-
+params_transform['np'] = 56
+params_transform['sigma'] = 7.0
 
 def get_loss(saved_for_loss, heat_temp, heat_weight,
                vec_temp, vec_weight):
@@ -274,7 +263,7 @@ print("Loading dataset...")
 train_data = get_loader(args.json_path, args.data_dir,
                         args.mask_dir, 368, 8,
                         'rtpose', args.batch_size,
-                        shuffle=True, training=True, num_workers=8)
+                        shuffle=True, training=True, num_workers=16)
 print('train dataset len: {}'.format(len(train_data.dataset)))
 
 # validation data

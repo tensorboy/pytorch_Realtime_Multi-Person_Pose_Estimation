@@ -24,7 +24,7 @@ def putVecMaps(centerA, centerB, accumulate_vec_map, count, params_transform):
     crop_size_x = params_transform['crop_size_x']
     grid_y = crop_size_y / stride
     grid_x = crop_size_x / stride
-    thre = 1  # limb width
+    thre = params_transform['limb_width']   # limb width
     centerB = centerB / stride
     centerA = centerA / stride
 

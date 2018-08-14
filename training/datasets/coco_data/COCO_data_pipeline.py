@@ -22,33 +22,14 @@ first 2644 of val2014 marked by 'isValidation = 1', as our minval dataset.
 So all training data have 82783+40504-2644 = 120643 samples
 '''
 
-params_transform = dict()
-params_transform['mode'] = 5
-# === aug_scale ===
-params_transform['scale_min'] = 0.5
-params_transform['scale_max'] = 1.1
-params_transform['scale_prob'] = 1
-params_transform['target_dist'] = 0.6
-# === aug_rotate ===
-params_transform['max_rotate_degree'] = 40
-
-# ===
-params_transform['center_perterb_max'] = 40
-
-# === aug_flip ===
-params_transform['flip_prob'] = 0.5
-
-params_transform['np'] = 56
-params_transform['sigma'] = 7.0
-
-
 class Cocokeypoints(Dataset):
     def __init__(self, root, mask_dir, index_list, data, inp_size, feat_stride, preprocess='rtpose', transform=None,
-                 target_transform=None):
+                 target_transform=None, params_transform=None):
 
-        params_transform['crop_size_x'] = inp_size
-        params_transform['crop_size_y'] = inp_size
-        params_transform['stride'] = feat_stride
+        self.params_transform = params_transform
+        self.params_transform['crop_size_x'] = inp_size
+        self.params_transform['crop_size_y'] = inp_size
+        self.params_transform['stride'] = feat_stride
 
         # add preprocessing as a choice, so we don't modify it manually.
         self.preprocess = preprocess
@@ -146,8 +127,8 @@ class Cocokeypoints(Dataset):
         return meta
 
     def remove_illegal_joint(self, meta):
-        crop_x = int(params_transform['crop_size_x'])
-        crop_y = int(params_transform['crop_size_y'])
+        crop_x = int(self.params_transform['crop_size_x'])
+        crop_y = int(self.params_transform['crop_size_y'])
         mask = np.logical_or.reduce((meta['joint_self'][:, 0] >= crop_x,
                                      meta['joint_self'][:, 0] < 0,
                                      meta['joint_self'][:, 1] >= crop_y,
@@ -167,11 +148,11 @@ class Cocokeypoints(Dataset):
 
     def get_ground_truth(self, meta, mask_miss):
 
-        stride = params_transform['stride']
-        mode = params_transform['mode']
-        crop_size_y = params_transform['crop_size_y']
-        crop_size_x = params_transform['crop_size_x']
-        num_parts = params_transform['np']
+        stride = self.params_transform['stride']
+        mode = self.params_transform['mode']
+        crop_size_y = self.params_transform['crop_size_y']
+        crop_size_x = self.params_transform['crop_size_x']
+        num_parts = self.params_transform['np']
         nop = meta['numOtherPeople']
         grid_y = crop_size_y / stride
         grid_x = crop_size_x / stride
@@ -194,13 +175,13 @@ class Cocokeypoints(Dataset):
                 center = meta['joint_self'][i, :2]
                 gaussian_map = heatmaps[:, :, i]
                 heatmaps[:, :, i] = putGaussianMaps(
-                    center, gaussian_map, params_transform=params_transform)
+                    center, gaussian_map, params_transform=self.params_transform)
             for j in range(nop):
                 if (meta['joint_others'][j, i, 2] <= 1):
                     center = meta['joint_others'][j, i, :2]
                     gaussian_map = heatmaps[:, :, i]
                     heatmaps[:, :, i] = putGaussianMaps(
-                        center, gaussian_map, params_transform=params_transform)
+                        center, gaussian_map, params_transform=self.params_transform)
         # pafs
         mid_1 = [2, 9, 10, 2, 12, 13, 2, 3, 4,
                  3, 2, 6, 7, 6, 2, 1, 1, 15, 16]
@@ -221,7 +202,7 @@ class Cocokeypoints(Dataset):
                 pafs[:, :, 2 * i:2 * i + 2], count = putVecMaps(centerA=centerA,
                                                                 centerB=centerB,
                                                                 accumulate_vec_map=vec_map,
-                                                                count=count, params_transform=params_transform)
+                                                                count=count, params_transform=self.params_transform)
             for j in range(nop):
                 if (meta['joint_others'][j, mid_1[i] - 1, 2] <= 1 and meta['joint_others'][j, mid_2[i] - 1, 2] <= 1):
                     centerA = meta['joint_others'][j, mid_1[i] - 1, :2]
@@ -230,7 +211,7 @@ class Cocokeypoints(Dataset):
                     pafs[:, :, 2 * i:2 * i + 2], count = putVecMaps(centerA=centerA,
                                                                     centerB=centerB,
                                                                     accumulate_vec_map=vec_map,
-                                                                    count=count, params_transform=params_transform)
+                                                                    count=count, params_transform=self.params_transform)
         # background
         heatmaps[:, :, -
                  1] = np.maximum(1 - np.max(heatmaps[:, :, :18], axis=2), 0.)
@@ -254,16 +235,16 @@ class Cocokeypoints(Dataset):
         meta_data = self.add_neck(meta_data)
 
         meta_data, img, mask_miss = aug_scale(
-            meta_data, img, mask_miss, params_transform)
+            meta_data, img, mask_miss, self.params_transform)
 
         meta_data, img, mask_miss = aug_rotate(
-            meta_data, img, mask_miss, params_transform)
+            meta_data, img, mask_miss, self.params_transform)
 
         meta_data, img, mask_miss = aug_croppad(
-            meta_data, img, mask_miss, params_transform)
+            meta_data, img, mask_miss, self.params_transform)
 
         meta_data, img, mask_miss = aug_flip(
-            meta_data, img, mask_miss, params_transform)
+            meta_data, img, mask_miss, self.params_transform)
 
         meta_data = self.remove_illegal_joint(meta_data)
 
