@@ -292,7 +292,7 @@ lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, 
 best_val_loss = np.inf
 
 
-model_save_filename = './network/weight/best_pose_SH.pth'
+model_save_filename = './network/weight/best_pose_SH_lr05.pth'
 for epoch in range(args.epochs):
 
     # train for one epoch
