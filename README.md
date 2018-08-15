@@ -38,7 +38,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 
 |   Reported on paper (VGG19)| mAP in this repo (VGG19)| Trained from scratch in this repo| 
 |  ------     | --------- | --------- |
-|   0.577      | 0.598     |  0.614 |
+|   0.577      | 0.598     |  **0.614** |
 
 
 ## Training
