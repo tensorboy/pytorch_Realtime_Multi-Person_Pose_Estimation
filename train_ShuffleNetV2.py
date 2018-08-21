@@ -262,14 +262,15 @@ print("Loading dataset...")
 # load data
 train_data = get_loader(args.json_path, args.data_dir,
                         args.mask_dir, 368, 8,
-                        'rtpose', args.batch_size,
+                        'rtpose', args.batch_size, params_transform = params_transform, 
                         shuffle=True, training=True, num_workers=16)
 print('train dataset len: {}'.format(len(train_data.dataset)))
 
 # validation data
 valid_data = get_loader(args.json_path, args.data_dir, args.mask_dir, 368,
                             8, preprocess='rtpose', training=False,
-                            batch_size=args.batch_size, shuffle=False, num_workers=4)
+                            batch_size=args.batch_size,  params_transform = params_transform, 
+                            shuffle=False, num_workers=4)
 print('val dataset len: {}'.format(len(valid_data.dataset)))
 
 # model

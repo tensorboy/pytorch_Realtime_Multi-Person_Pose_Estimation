@@ -81,8 +81,9 @@ def get_loss(saved_for_loss, heat_temp, heat_weight,
                vec_temp, vec_weight):
 
     saved_for_log = OrderedDict()
-    criterion = nn.MSELoss(size_average=True).cuda()
-    #criterion = encoding.nn.DataParallelCriterion(criterion, device_ids=args.gpu_ids)
+    criterion = nn.MSELoss(size_average=False).cuda()
+    batch_size = heat_temp.size(0)
+    
     total_loss = 0
 
     pred1 = saved_for_loss[0] * vec_weight
@@ -104,8 +105,8 @@ def get_loss(saved_for_loss, heat_temp, heat_weight,
     """
 
     # Compute losses
-    loss1 = criterion(pred1, gt1)
-    loss2 = criterion(pred2, gt2) 
+    loss1 = criterion(pred1, gt1)/(2*batch_size)
+    loss2 = criterion(pred2, gt2)/(2*batch_size)
 
     total_loss += loss1
     total_loss += loss2
@@ -292,7 +293,7 @@ lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, 
 best_val_loss = np.inf
 
 
-model_save_filename = './network/weight/best_pose_SH_lr05.pth'
+model_save_filename = './network/weight/best_pose_SH.pth'
 for epoch in range(args.epochs):
 
     # train for one epoch

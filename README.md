@@ -30,7 +30,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 ## Evalute
 - `python evaluate/evaluation.py` to evaluate the model on [images seperated by the original author](https://github.com/CMU-Perceptual-Computing-Lab/caffe_rtpose/blob/master/image_info_val2014_1k.txt)
 - It should have `mAP 0.598` for the original rtpose, original repo have `mAP 0.577` because we do left and right flip for heatmap and PAF for the evaluation. 
-
+c
 ### Pretrained Models & Performance on the dataset split by the original rtpose.
 [rtpose original](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0), [trained from scratch](https://www.dropbox.com/s/5v654d2u65fuvyr/pose_model_scratch.pth?dl=0) (Notice the preprocessing is different for different models)
 
@@ -45,7 +45,7 @@ Code repo for reproducing 2017 CVPR Oral paper using pytorch.
 - Download the official training format at [Dropbox](https://www.dropbox.com/s/0sj2q24hipiiq5t/COCO.json?dl=0)
 - `python train_VGG19.py --batch_size 100 --logdir {where to store tensorboardX logs}`
 - `python train_ShuffleNetV2.py --batch_size 160 --logdir {where to store tensorboardX logs}`
-- `python train_SH.py --batch_size 60 --lr 0.1 --logdir {where to store tensorboardX logs}`
+- `python train_SH.py --batch_size 64 --lr 0.1 --logdir {where to store tensorboardX logs}`
 ## Related repository
 - CVPR'16, [Convolutional Pose Machines](https://github.com/shihenw/convolutional-pose-machines-release).
 - CVPR'17, [Realtime Multi-Person Pose Estimation](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation).
