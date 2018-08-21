@@ -28,7 +28,7 @@ weight_name = './network/weight/pose_model.pth'
 
 model = get_model('vgg19')     
 model.load_state_dict(torch.load(weight_name))
-model.cuda()
+model = torch.nn.DataParallel(model).cuda()
 model.float()
 model.eval()
 
