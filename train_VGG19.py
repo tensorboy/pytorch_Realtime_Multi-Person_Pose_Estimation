@@ -340,7 +340,7 @@ for epoch in range(5, args.epochs):
     lr_scheduler.step(val_loss)                        
     
     is_best = val_loss<best_val_loss
-    best_val_loss = max(val_loss, best_val_loss)
+    best_val_loss = min(val_loss, best_val_loss)
     if is_best:
         torch.save(model.state_dict(), model_save_filename)      
         
