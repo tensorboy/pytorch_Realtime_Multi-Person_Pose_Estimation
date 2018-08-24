@@ -22,7 +22,7 @@ from training.datasets.coco_data.preprocessing import (inception_preprocess,
                                               rtpose_preprocess,
                                               ssd_preprocess, vgg_preprocess)
 from network import im_transform
-from evaluation.coco_eval import get_multiplier, get_outputs
+from evaluate.coco_eval import get_multiplier, get_outputs
 #parser = argparse.ArgumentParser()
 #parser.add_argument('--t7_file', required=True)
 #parser.add_argument('--pth_file', required=True)

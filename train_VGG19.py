@@ -72,6 +72,7 @@ params_transform['flip_prob'] = 0.5
 
 params_transform['np'] = 56
 params_transform['sigma'] = 7.0
+params_transform['limb_width'] = 1.
 
 def build_names():
     names = []
