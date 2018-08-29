@@ -230,11 +230,6 @@ def validate(val_loader, model, epoch):
             
         losses.update(total_loss.item(), img.size(0))
 
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        total_loss.backward()
-        optimizer.step()
-
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()  
