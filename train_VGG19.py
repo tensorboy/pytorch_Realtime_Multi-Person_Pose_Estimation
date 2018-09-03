@@ -206,7 +206,7 @@ def validate(val_loader, model, epoch):
     meter_dict['max_paf'] = AverageMeter()    
     meter_dict['min_paf'] = AverageMeter()
     # switch to train mode
-    model.train()
+    model.eval()
 
     end = time.time()
     for i, (img, heatmap_target, heat_mask, paf_target, paf_mask) in enumerate(val_loader):
