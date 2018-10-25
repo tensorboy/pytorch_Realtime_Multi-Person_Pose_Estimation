@@ -222,14 +222,15 @@ class Cocokeypoints(Dataset):
         idx = self.index_list[index]
         img = cv2.imread(os.path.join(self.root, self.data[idx]['img_paths']))
         img_idx = self.data[idx]['img_paths'][-16:-3]
-#        print img.shape
+        # print( img.shape)
+        # print("idx: {}  dataset:{}   img_idx: {}{}".format(idx, self.data[idx]['dataset'], self.root, self.data[idx]['img_paths']))
         if "COCO_val" in self.data[idx]['dataset']:
             mask_miss = cv2.imread(
-                self.mask_dir + 'mask2014/val2014_mask_miss_' + img_idx + 'png', 0)
+                self.mask_dir + 'mask2014/val2014/mask_COCO_val2014_' + img_idx + 'jpg', 0)
         elif "COCO" in self.data[idx]['dataset']:
             mask_miss = cv2.imread(
-                self.mask_dir + 'mask2014/train2014_mask_miss_' + img_idx + 'png', 0)
-#        print self.root + 'mask2014/val2014_mask_miss_' + img_idx + 'png'
+                self.mask_dir + 'mask2014/train2014/mask_COCO_train2014_' + img_idx + 'jpg', 0)
+        # print (self.root + 'mask2014/val2014_mask_miss_' + img_idx + 'png')
         meta_data = self.get_anno(self.data[idx])
 
         meta_data = self.add_neck(meta_data)

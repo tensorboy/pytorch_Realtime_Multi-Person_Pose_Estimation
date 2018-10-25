@@ -35,6 +35,7 @@ def aug_scale(meta, img, mask_miss, params_transform):
             params_transform['scale_min']
     scale_abs = params_transform['target_dist'] / meta['scale_provided']
     scale = scale_abs * scale_multiplier
+    
     img = cv2.resize(img, (0, 0), fx=scale, fy=scale,
                      interpolation=cv2.INTER_CUBIC)
 
