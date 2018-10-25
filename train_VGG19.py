@@ -32,7 +32,7 @@ parser.add_argument('--lr', '--learning-rate', default=1., type=float,
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
  
-parser.add_argument('--epochs', default=200, type=int, metavar='N',
+parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of total epochs to run')
                     
 parser.add_argument('--weight-decay', '--wd', default=0.000, type=float,
@@ -44,7 +44,7 @@ parser.add_argument('-o', '--optim', default='sgd', type=str)
 parser.add_argument('--gpu_ids', dest='gpu_ids', help='which gpu to use', nargs="+",
                     default=[0,1,2,3], type=int)
                     
-parser.add_argument('-b', '--batch_size', default=80, type=int,
+parser.add_argument('-b', '--batch_size', default=10, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 
 parser.add_argument('--print_freq', default=20, type=int, metavar='N',
