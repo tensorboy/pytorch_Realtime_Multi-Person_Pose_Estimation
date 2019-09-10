@@ -1,0 +1,77 @@
+EXPERIMENT_NAME: 'rtpose_lr005'
+DATA_DIR: '/data'
+OUTPUT_DIR: '/data/rtpose'
+GPUS: 
+  - 0
+  - 1
+  - 2
+  - 3
+WORKERS: 8
+PRINT_FREQ: 100
+
+CUDNN:
+  BENCHMARK: true
+  DETERMINISTIC: false
+  ENABLED: true
+  
+DATASET:
+  COLOR_RGB: false
+  DATASET: 'coco'
+  TEST_SET: 'val2017'
+  TRAIN_SET: 'train2017'
+  FLIP: true
+  ROT_FACTOR: 40
+  SCALE_MIN: 0.5
+  SCALE_MAX: 1.1               
+  IMAGE_SIZE: 368  
+  TRAIN_IMAGE_DIR: 'images/train2017'
+  TRAIN_ANNOTATIONS: ['annotations/person_keypoints_train2017.json']
+  VAL_IMAGE_DIR: 'images/val2017'
+  VAL_ANNOTATIONS: 'annotations/person_keypoints_val2017.json' 
+  
+MODEL:
+  NAME: 'pose_resnet'
+  PRETRAINED: 'models/pytorch/imagenet/resnet101-5d3b4d8f.pth'
+  HEATMAP_SIZE:
+  - 46
+  - 46
+  SIGMA: 7
+  NUM_KEYPOINTS: 18
+  DOWNSAMPLE: 8
+  TARGET_TYPE: 'gaussian'
+  
+LOSS:
+  USE_TARGET_WEIGHT: true
+  
+PRE_TRAIN :
+  LR : 0.05
+  OPTIMIZER : 'sgd'
+  MOMENTUM : 0.9
+  WD : 0.0001
+  NESTEROV : false
+  FREEZE_BASE_EPOCHS: 5
+       
+TRAIN:
+  BATCH_SIZE_PER_GPU: 18
+  SHUFFLE: true
+  EPOCHS: 300
+  OPTIMIZER: 'sgd'
+  LR: 0.05
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 90
+  - 120
+  WD: 0.0000
+  GAMMA1: 0.99
+  GAMMA2: 0.0
+  MOMENTUM: 0.9
+  NESTEROV: true
+  
+TEST:
+  BATCH_SIZE_PER_GPU: 18
+  FLIP_TEST: true
+  THRESH_HEATMAP: 0.1
+  THRESH_PAF: 0.05
+  NUM_INTERMED_PTS_BETWEEN_KEYPOINTS: 10  
+  BATCH_SIZE_PER_GPU: 8
+  FLIP_TEST: true  
