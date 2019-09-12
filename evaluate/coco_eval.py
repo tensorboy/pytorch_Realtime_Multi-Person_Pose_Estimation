@@ -51,12 +51,6 @@ The order in this work:
 
 ORDER_COCO = [0, 15, 14, 17, 16, 5, 2, 6, 3, 7, 4, 11, 8, 12, 9, 13, 10]
 
-MID_1 = [1, 8,  9, 1,  11, 12, 1, 2, 3,
-         2,  1, 5, 6, 5,  1, 0,  0,  14, 15]
-
-MID_2 = [8, 9, 10, 11, 12, 13, 2, 3, 4,
-         16, 5, 6, 7, 17, 0, 14, 15, 16, 17]
-
 
 def eval_coco(outputs, annFile, imgIds):
     """Evaluate images on Coco test set
@@ -256,9 +250,6 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
     coco = COCO(anno_file)
     cat_ids = coco.getCatIds(catNms=['person'])    
     img_ids = coco.getImgIds(catIds=cat_ids)
-
-    # img_ids = img_ids[81:82]
-    # img_paths = img_paths[81:82]
     print("Total number of validation images {}".format(len(img_ids)))
 
     # iterate all val images

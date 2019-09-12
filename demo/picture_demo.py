@@ -27,9 +27,9 @@ from lib.config import cfg, update_config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cfg', help='experiment configure file name',
-                    default='./experiments/vgg19_368x368_sgd_lr1.yaml', type=str)
+                    default='./experiments/vgg19_368x368_sgd.yaml', type=str)
 parser.add_argument('--weight', type=str,
-                    default='../ckpts/openpose.pth')
+                    default='/home/tensorboy/Downloads/pose_model.pth')
 parser.add_argument('opts',
                     help="Modify config options using the command-line",
                     default=None,
@@ -40,7 +40,7 @@ args = parser.parse_args()
 update_config(cfg, args)
 
         
-weight_name = '/home/tensorboy/data/pretrained_models/pose_model.pth'
+weight_name = '/home/tensorboy/Downloads/pose_model.pth'
 
 model = get_model('vgg19')     
 model.load_state_dict(torch.load(weight_name))

@@ -347,15 +347,11 @@ def paf_to_pose(heatmaps, pafs, config):
     # Bottom-up approach:
     # Step 1: find all joints in the image (organized by joint type: [0]=nose,
     # [1]=neck...)
-    tic = time.time()
     joint_list_per_joint_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)
-    toc = time.time()
-    print(toc - tic)
     # joint_list is an unravel'd version of joint_list_per_joint, where we add
     # a 5th column to indicate the joint_type (0=nose, 1=neck...)
     joint_list = np.array([tuple(peak) + (joint_type,) for joint_type,
-                                                           joint_peaks in enumerate(joint_list_per_joint_type) for peak
-                           in joint_peaks])
+                                                           joint_peaks in enumerate(joint_list_per_joint_type) for peak in joint_peaks])
 
     # import ipdb
     # ipdb.set_trace()

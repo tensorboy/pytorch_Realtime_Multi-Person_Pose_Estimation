@@ -161,7 +161,6 @@ class rtpose_lightning(pl.LightningModule):
         return output_dict
 
     def configure_optimizers(self):
-
         #scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, \
         #            verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3,\
         #            min_lr=0, eps=1e-08)

@@ -9,7 +9,7 @@ from torch import load
 #Notice, if you using the 
 with torch.autograd.no_grad():
     # this path is with respect to the root of the project
-    weight_name = '/data/rtpose/rtpose_lr01/0/_ckpt_epoch_150.ckpt'
+    weight_name = '/data/rtpose/rtpose_lr001/1/_ckpt_epoch_82.ckpt'
     state_dict = torch.load(weight_name)['state_dict']
     
     new_state_dict = OrderedDict()

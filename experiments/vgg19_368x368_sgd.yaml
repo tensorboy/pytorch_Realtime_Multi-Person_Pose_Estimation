@@ -1,4 +1,4 @@
-EXPERIMENT_NAME: 'rtpose_lr005'
+EXPERIMENT_NAME: 'rtpose_lr001'
 DATA_DIR: '/data'
 OUTPUT_DIR: '/data/rtpose'
 GPUS: 
@@ -44,7 +44,7 @@ LOSS:
   USE_TARGET_WEIGHT: true
   
 PRE_TRAIN :
-  LR : 0.05
+  LR : 0.01
   OPTIMIZER : 'sgd'
   MOMENTUM : 0.9
   WD : 0.0001
@@ -56,7 +56,7 @@ TRAIN:
   SHUFFLE: true
   EPOCHS: 300
   OPTIMIZER: 'sgd'
-  LR: 0.05
+  LR: 0.01
   LR_FACTOR: 0.1
   LR_STEP:
   - 90
