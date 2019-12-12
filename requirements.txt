@@ -1,0 +1,7 @@
+opencv-python
+Cython
+progress
+matplotlib
+scipy
+pycocotools
+yacs

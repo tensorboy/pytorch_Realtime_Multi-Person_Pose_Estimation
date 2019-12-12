@@ -12,7 +12,7 @@ from lib.network.rtpose_vgg import get_model, use_vgg
 from lib.datasets import coco, transforms, datasets
 from lib.config import update_config
 
-DATA_DIR = '/home/tensorboy/data/coco'
+DATA_DIR = '/data/coco'
 
 ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
 ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')

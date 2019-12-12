@@ -23,6 +23,7 @@ from evaluate.coco_eval import get_outputs, handle_paf_and_heat
 from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRender
 from lib.pafprocess import pafprocess
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--cfg', help='experiment configure file name',
                     default='./experiments/vgg19_368x368_sgd_lr1.yaml', type=str)
@@ -36,6 +37,16 @@ args = parser.parse_args()
 
 # update config file
 update_config(cfg, args)
+
+
+def get_multiplier(img):
+    """Computes the sizes of image at different scales
+    :param img: numpy array, the current image
+    :returns : list of float. The computed scales
+    """
+    scale_search = [0.5, 1., 1.5, 2]
+    return [x * 368. / float(img.shape[0]) for x in scale_search]
+
 
 def draw_humans(npimg, humans, imgcopy=False):
     if imgcopy:

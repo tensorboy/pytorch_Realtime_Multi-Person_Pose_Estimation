@@ -11,11 +11,9 @@ Multi Person PoseEstimation By PyTorch
 
 ## Require
 1. [Pytorch](http://pytorch.org/)
-2. pytorch-lightning
 
 ## Installation
 1. git submodule init && git submodule update
-2. `cd pytorch-lightning`; `python setup.py install`
 
 ## Demo
 - Download [converted pytorch model](https://www.dropbox.com/s/ae071mfm2qoyc8v/pose_model.pth?dl=0).
@@ -87,17 +85,7 @@ All contributions are welcomed. If you encounter any issue (including examples o
 
 ## Citation
 Please cite the paper in your publications if it helps your research: 
-   
-    @INPROCEEDINGS{8486591, 
-    author={Haoqian Wang and Wang Peng An and X. Wang and L. Fang and J. Yuan}, 
-    booktitle={2018 IEEE International Conference on Multimedia and Expo (ICME)}, 
-    title={Magnify-Net for Multi-Person 2D Pose Estimation}, 
-    year={2018}, 
-    volume={}, 
-    number={}, 
-    pages={1-6}, 
-    month={July},}
-    
+
     @InProceedings{cao2017realtime,
       title = {Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
       author = {Zhe Cao and Tomas Simon and Shih-En Wei and Yaser Sheikh},
