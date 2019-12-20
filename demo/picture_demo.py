@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+sys.path.append('.')
 import cv2
 import math
 import time
@@ -29,7 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--cfg', help='experiment configure file name',
                     default='./experiments/vgg19_368x368_sgd.yaml', type=str)
 parser.add_argument('--weight', type=str,
-                    default='/home/tensorboy/Downloads/pose_model.pth')
+                    default='pose_model.pth')
 parser.add_argument('opts',
                     help="Modify config options using the command-line",
                     default=None,
@@ -39,11 +40,10 @@ args = parser.parse_args()
 # update config file
 update_config(cfg, args)
 
-        
-weight_name = '/home/tensorboy/Downloads/pose_model.pth'
+
 
 model = get_model('vgg19')     
-model.load_state_dict(torch.load(weight_name))
+model.load_state_dict(torch.load(args.weight))
 model = torch.nn.DataParallel(model).cuda()
 model.float()
 model.eval()
