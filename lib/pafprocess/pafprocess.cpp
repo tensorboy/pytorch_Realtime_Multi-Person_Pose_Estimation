@@ -9,7 +9,7 @@
 
 using namespace std;
 
-vector <vector<float>> subset;
+vector <vector<float> > subset;
 vector <Peak> peak_infos_line;
 
 int roundpaf(float v);
