@@ -4,6 +4,9 @@ import os
 import numpy as np
 from collections import OrderedDict
 
+import sys 
+sys.path.append(os.path.abspath("./"))
+
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -12,7 +15,7 @@ from lib.network.rtpose_vgg import get_model, use_vgg
 from lib.datasets import coco, transforms, datasets
 from lib.config import update_config
 
-DATA_DIR = '/data/coco'
+DATA_DIR = 'data\coco'
 
 ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
 ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
@@ -34,7 +37,7 @@ def train_cli(parser):
                        help='duplicate data')
     group.add_argument('--loader-workers', default=8, type=int,
                        help='number of workers for data loading')
-    group.add_argument('--batch-size', default=72, type=int,
+    group.add_argument('--batch-size', default=5, type=int,
                        help='batch size')
     group.add_argument('--lr', '--learning-rate', default=1., type=float,
                     metavar='LR', help='initial learning rate')
@@ -117,18 +120,6 @@ def cli():
         
     return args
 
-args = cli()
-
-print("Loading dataset...")
-# load train data
-preprocess = transforms.Compose([
-        transforms.Normalize(),
-        transforms.RandomApply(transforms.HFlip(), 0.5),
-        transforms.RescaleRelative(),
-        transforms.Crop(args.square_edge),
-        transforms.CenterPad(args.square_edge),
-    ])
-train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
 
 
 def build_names():
@@ -294,59 +285,75 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-# model
-model = get_model(trunk='vgg19')
-model = torch.nn.DataParallel(model).cuda()
-# load pretrained
-use_vgg(model)
+
+if __name__ == '__main__':
+
+    args = cli()
+
+    print("Loading dataset...")
+    # load train data
+    preprocess = transforms.Compose([
+            transforms.Normalize(),
+            transforms.RandomApply(transforms.HFlip(), 0.5),
+            transforms.RescaleRelative(),
+            transforms.Crop(args.square_edge),
+            transforms.CenterPad(args.square_edge),
+        ])
+    train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
+
+    # model
+    model = get_model(trunk='vgg19')
+    model = torch.nn.DataParallel(model).cuda()
+    # load pretrained
+    use_vgg(model)
 
 
-# Fix the VGG weights first, and then the weights will be released
-for i in range(20):
-    for param in model.module.model0[i].parameters():
-        param.requires_grad = False
+    # Fix the VGG weights first, and then the weights will be released
+    for i in range(20):
+        for param in model.module.model0[i].parameters():
+            param.requires_grad = False
 
-trainable_vars = [param for param in model.parameters() if param.requires_grad]
-optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
-                           momentum=args.momentum,
-                           weight_decay=args.weight_decay,
-                           nesterov=args.nesterov)     
-                                                                                          
-for epoch in range(5):
-    # train for one epoch
-    train_loss = train(train_loader, model, optimizer, epoch)
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                            momentum=args.momentum,
+                            weight_decay=args.weight_decay,
+                            nesterov=args.nesterov)     
+                                                                                            
+    for epoch in range(5):
+        # train for one epoch
 
-    # evaluate on validation set
-    val_loss = validate(val_loader, model, epoch)  
-                                            
-# Release all weights                                   
-for param in model.module.parameters():
-    param.requires_grad = True
+        train_loss = train(train_loader, model, optimizer, epoch)
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)  
+                                                
+    # Release all weights                                   
+    for param in model.module.parameters():
+        param.requires_grad = True
 
-trainable_vars = [param for param in model.parameters() if param.requires_grad]
-optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
-                           momentum=args.momentum,
-                           weight_decay=args.weight_decay,
-                           nesterov=args.nesterov)          
-                                                    
-lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                            momentum=args.momentum,
+                            weight_decay=args.weight_decay,
+                            nesterov=args.nesterov)          
+                                                        
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
-best_val_loss = np.inf
+    best_val_loss = np.inf
 
 
-model_save_filename = './network/weight/best_pose.pth'
-for epoch in range(5, args.epochs):
+    model_save_filename = './network/weight/best_pose.pth'
+    for epoch in range(5, args.epochs):
 
-    # train for one epoch
-    train_loss = train(train_loader, model, optimizer, epoch)
+        # train for one epoch
+        train_loss = train(train_loader, model, optimizer, epoch)
 
-    # evaluate on validation set
-    val_loss = validate(val_loader, model, epoch)   
-    
-    lr_scheduler.step(val_loss)                        
-    
-    is_best = val_loss<best_val_loss
-    best_val_loss = min(val_loss, best_val_loss)
-    if is_best:
-        torch.save(model.state_dict(), model_save_filename)      
-          
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)   
+        
+        lr_scheduler.step(val_loss)                        
+        
+        is_best = val_loss<best_val_loss
+        best_val_loss = min(val_loss, best_val_loss)
+        if is_best:
+            torch.save(model.state_dict(), model_save_filename)      
+            

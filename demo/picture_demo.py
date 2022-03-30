@@ -48,7 +48,8 @@ model = torch.nn.DataParallel(model).cuda()
 model.float()
 model.eval()
 
-test_image = './readme/ski.jpg'
+img_name = 'beans.jpg'
+test_image = os.path.join('./readme/', img_name)
 oriImg = cv2.imread(test_image) # B,G,R order
 shape_dst = np.min(oriImg.shape[0:2])
 
@@ -56,10 +57,11 @@ shape_dst = np.min(oriImg.shape[0:2])
 
 with torch.no_grad():
     paf, heatmap, im_scale = get_outputs(oriImg, model,  'rtpose')
-          
-print(im_scale)
+
+print("im_scale:", im_scale)
+
 humans = paf_to_pose_cpp(heatmap, paf, cfg)
-        
+
 out = draw_humans(oriImg, humans)
-cv2.imwrite('result.png',out)   
+cv2.imwrite(img_name.split('.')[0] + '_result.png', out)   
 
