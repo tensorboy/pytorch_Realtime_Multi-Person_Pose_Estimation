@@ -120,6 +120,35 @@ class Normalize(Preprocess):
 
         return image, anns, meta
 
+class NormalizeBean(Preprocess):
+    @staticmethod
+    def normalize_annotations(anns):
+        anns = copy.deepcopy(anns)
+
+        # convert as much data as possible to numpy arrays to avoid every float
+        # being turned into its own torch.Tensor()
+        for ann in anns:
+            ann['keypoints'] = np.asarray(ann['keypoints'], dtype=np.float32).reshape(-1, 3)
+            ann['bbox'] = np.asarray(ann['bbox'], dtype=np.float32)
+            ann['bbox_original'] = np.copy(ann['bbox'])
+
+        return anns
+
+    def __call__(self, image, anns, meta):
+        anns = self.normalize_annotations(anns)
+
+        if meta is None:
+            w, h = image.size
+            meta = {
+                'offset': np.array((0.0, 0.0)),
+                'scale': np.array((1.0, 1.0)),
+                'valid_area': np.array((0.0, 0.0, w, h)),
+                'hflip': False,
+                'width_height': np.array((w, h)),
+            }
+
+        return image, anns, meta
+
 
 class Compose(Preprocess):
     def __init__(self, preprocess_list):

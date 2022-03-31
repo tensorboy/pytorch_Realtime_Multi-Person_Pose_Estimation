@@ -10,30 +10,32 @@ from .heatmap import putGaussianMaps
 from .paf import putVecMaps
 from . import transforms, utils
 
+
 def kp_connections(keypoints):
     kp_lines = [
-        [keypoints.index('neck'), keypoints.index('right_hip')],  
+        [keypoints.index('neck'), keypoints.index('right_hip')],
         [keypoints.index('right_hip'), keypoints.index('right_knee')],
         [keypoints.index('right_knee'), keypoints.index('right_ankle')],
-        [keypoints.index('neck'), keypoints.index('left_hip')],                
+        [keypoints.index('neck'), keypoints.index('left_hip')],
         [keypoints.index('left_hip'), keypoints.index('left_knee')],
         [keypoints.index('left_knee'), keypoints.index('left_ankle')],
-        [keypoints.index('neck'), keypoints.index('right_shoulder')],          
+        [keypoints.index('neck'), keypoints.index('right_shoulder')],
         [keypoints.index('right_shoulder'), keypoints.index('right_elbow')],
-        [keypoints.index('right_elbow'), keypoints.index('right_wrist')],     
-        [keypoints.index('right_shoulder'), keypoints.index('right_eye')],        
-        [keypoints.index('neck'), keypoints.index('left_shoulder')], 
+        [keypoints.index('right_elbow'), keypoints.index('right_wrist')],
+        [keypoints.index('right_shoulder'), keypoints.index('right_eye')],
+        [keypoints.index('neck'), keypoints.index('left_shoulder')],
         [keypoints.index('left_shoulder'), keypoints.index('left_elbow')],
         [keypoints.index('left_elbow'), keypoints.index('left_wrist')],
-        [keypoints.index('left_shoulder'), keypoints.index('left_eye')],               
-        [keypoints.index('neck'), keypoints.index('nose')],                      
+        [keypoints.index('left_shoulder'), keypoints.index('left_eye')],
+        [keypoints.index('neck'), keypoints.index('nose')],
         [keypoints.index('nose'), keypoints.index('right_eye')],
-        [keypoints.index('nose'), keypoints.index('left_eye')],        
+        [keypoints.index('nose'), keypoints.index('left_eye')],
         [keypoints.index('right_eye'), keypoints.index('right_ear')],
         [keypoints.index('left_eye'), keypoints.index('left_ear')]
     ]
     return kp_lines
-    
+
+
 def get_keypoints():
     """Get the COCO keypoints and their left/right flip coorespondence map."""
     # Keypoints are not available in the COCO json for the test split, so we
@@ -43,7 +45,7 @@ def get_keypoints():
         'neck',
         'right_shoulder',
         'right_elbow',
-        'right_wrist',   
+        'right_wrist',
         'left_shoulder',
         'left_elbow',
         'left_wrist',
@@ -53,13 +55,14 @@ def get_keypoints():
         'left_hip',
         'left_knee',
         'left_ankle',
-        'right_eye',                                                                    
+        'right_eye',
         'left_eye',
         'right_ear',
         'left_ear']
 
     return keypoints
-    
+
+
 def collate_images_anns_meta(batch):
     images = torch.utils.data.dataloader.default_collate([b[0] for b in batch])
     anns = [b[1] for b in batch]
@@ -84,10 +87,9 @@ def collate_multiscale_images_anns_meta(batch):
 
 
 def collate_images_targets_meta(batch):
-
     images = torch.utils.data.dataloader.default_collate([b[0] for b in batch])
     targets1 = torch.utils.data.dataloader.default_collate([b[1] for b in batch])
-    targets2 = torch.utils.data.dataloader.default_collate([b[2] for b in batch])    
+    targets2 = torch.utils.data.dataloader.default_collate([b[2] for b in batch])
 
     return images, targets1, targets2
 
@@ -109,7 +111,8 @@ class CocoKeypoints(torch.utils.data.Dataset):
     """
 
     def __init__(self, root, annFile, image_transform=None, target_transforms=None,
-                 n_images=None, preprocess=None, all_images=False, all_persons=False, input_y=368, input_x=368, stride=8):
+                 n_images=None, preprocess=None, all_images=False, all_persons=False, input_y=368, input_x=368,
+                 stride=8):
         from pycocotools.coco import COCO
         self.root = root
         self.coco = COCO(annFile)
@@ -129,16 +132,17 @@ class CocoKeypoints(torch.utils.data.Dataset):
         self.preprocess = preprocess or transforms.Normalize()
         self.image_transform = image_transform or transforms.image_transform
         self.target_transforms = target_transforms
-        
+
         self.HEATMAP_COUNT = len(get_keypoints())
         self.LIMB_IDS = kp_connections(get_keypoints())
         self.input_y = input_y
-        self.input_x = input_x        
+        self.input_x = input_x
         self.stride = stride
         self.log = logging.getLogger(self.__class__.__name__)
 
     def filter_for_keypoint_annotations(self):
         print('filter for keypoint annotations ...')
+
         def has_keypoint_annotation(image_id):
             ann_ids = self.coco.getAnnIds(imgIds=image_id, catIds=self.cat_ids)
             anns = self.coco.loadAnns(ann_ids)
@@ -178,7 +182,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
         }
 
         image, anns, meta = self.preprocess(image, anns, None)
-             
+
         if isinstance(image, list):
             return self.multi_image_processing(image, anns, meta, meta_init)
 
@@ -195,7 +199,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
 
         # transform image
         original_size = image.size
-        image = self.image_transform(image)
+        image = self.image_transform(image)   # [3, 368, 368]
         assert image.size(2) == original_size[0]
         assert image.size(1) == original_size[1]
 
@@ -206,11 +210,11 @@ class CocoKeypoints(torch.utils.data.Dataset):
         self.log.debug(meta)
 
         heatmaps, pafs = self.get_ground_truth(anns)
-        
+
         heatmaps = torch.from_numpy(
-            heatmaps.transpose((2, 0, 1)).astype(np.float32))
-            
-        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))       
+            heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [19, 46, 46]
+
+        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [38, 46, 46]
         return image, heatmaps, pafs
 
     def remove_illegal_joint(self, keypoints):
@@ -223,7 +227,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
         keypoints[mask] = MAGIC_CONSTANT
 
         return keypoints
-        
+
     def add_neck(self, keypoint):
         '''
         MS COCO annotation order:
@@ -255,9 +259,9 @@ class CocoKeypoints(torch.utils.data.Dataset):
         keypoint = keypoint[our_order, :]
 
         return keypoint
-                
+
     def get_ground_truth(self, anns):
-    
+
         grid_y = int(self.input_y / self.stride)
         grid_x = int(self.input_x / self.stride)
         channels_heat = (self.HEATMAP_COUNT + 1)
@@ -267,7 +271,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
 
         keypoints = []
         for ann in anns:
-            single_keypoints = np.array(ann['keypoints']).reshape(17,3)
+            single_keypoints = np.array(ann['keypoints']).reshape(17, 3)
             single_keypoints = self.add_neck(single_keypoints)
             keypoints.append(single_keypoints)
         keypoints = np.array(keypoints)
@@ -306,9 +310,51 @@ class CocoKeypoints(torch.utils.data.Dataset):
             0.
         )
         return heatmaps, pafs
-        
+
     def __len__(self):
         return len(self.ids)
+
+
+class SoybeanKeypoints(torch.utils.data.Dataset):
+    def __init__(self, root, stride=8, image_transform=None,
+                 target_transforms=None, preprocess=None, input_y=368, input_x=368):
+        self.root = root
+        self.imgs = []
+        self.anns = []
+        self.preprocess = preprocess or transforms.Normalize()
+        self.image_transform = image_transform or transforms.image_transform
+        self.target_transforms = target_transforms
+        self.input_y = input_y
+        self.input_x = input_x
+        self.stride = stride
+
+        for root, dir, files in os.walk(self.root):
+            print(root)
+            print(dir)
+            i = 0
+            while i < len(files):
+                if i + 1 == len(files):
+                    i += 1
+                    continue
+                name_img, ext_img = os.path.splitext(files[i])
+                name_ann, ext_ann = os.path.splitext(files[i + 1])
+
+                if ext_img == '.jpg' and ext_ann == '.json' and name_img == name_ann:
+                    self.imgs.append(files[i])
+                    self.anns.append(files[i + 1])
+                i += 2
+
+        print('images:', len(self.imgs))
+        print('annotations:', len(self.anns))
+
+    def __getitem__(self, index):
+        ann = self.anns[index]
+        with open(os.path.join(self.root, self.imgs[index]), 'rb') as f:
+            image = Image.open(f).convert('RGB')
+        image, ann, meta = self.preprocess(image, ann, None)
+
+    def __len__(self):
+        return len(self.anns)
 
 
 class ImageList(torch.utils.data.Dataset):
@@ -348,4 +394,3 @@ class PilImageList(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.images)
-

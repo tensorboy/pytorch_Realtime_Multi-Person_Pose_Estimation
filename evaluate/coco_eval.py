@@ -111,6 +111,8 @@ def get_outputs(img, model, preprocess):
     heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
     paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
 
+    print(heatmap.shape)
+    print(paf.shape)
     return paf, heatmap, im_scale
 
 
