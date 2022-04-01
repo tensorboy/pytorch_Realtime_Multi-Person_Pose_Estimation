@@ -38,6 +38,8 @@ def blur_augmentation(im, max_sigma=5.0):
     return PIL.Image.fromarray(im_np)
 
 
+# Using the mean and std of Imagenet is a common practice. They are calculated based on millions of images
+# TODO maybe can change this to the mean of soybean images
 normalize = torchvision.transforms.Normalize(  # pylint: disable=invalid-name
     mean=[0.485, 0.456, 0.406],
     std=[0.229, 0.224, 0.225]
@@ -49,7 +51,7 @@ image_transform = torchvision.transforms.Compose([  # pylint: disable=invalid-na
     normalize,
 ])
 
-
+# TODO can use this
 image_transform_train = torchvision.transforms.Compose([  # pylint: disable=invalid-name
     torchvision.transforms.ColorJitter(brightness=0.1,
                                        contrast=0.1,
@@ -60,7 +62,7 @@ image_transform_train = torchvision.transforms.Compose([  # pylint: disable=inva
         torchvision.transforms.Lambda(jpeg_compression_augmentation),
     ], p=0.1),
     torchvision.transforms.RandomGrayscale(p=0.01),
-    torchvision.transforms.ToTensor(),
+    torchvision.transforms.ToTensor(),      # convert PIL image to tensor. range [0.0, 1.0]
     normalize,
 ])
 
@@ -338,7 +340,6 @@ class Crop(Preprocess):
             ann['keypoints'][:, 1] -= y_offset
             ann['bbox'][0] -= x_offset
             ann['bbox'][1] -= y_offset
-
         return image, anns, np.array(ltrb)
 
 
@@ -387,7 +388,6 @@ class CenterPad(Preprocess):
             ann['keypoints'][:, 1] += ltrb[1]
             ann['bbox'][0] += ltrb[0]
             ann['bbox'][1] += ltrb[1]
-
         return image, anns, ltrb
 
 

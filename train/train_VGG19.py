@@ -86,8 +86,6 @@ def bean_train_factory(args, preprocess, target_transforms):
     train_data = None
 
 
-
-
 def cli():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -293,18 +291,44 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-if __name__ == '__main__':
+def train_soybean():
+    print("Loading dataset...")
+    preprocess = transforms.Compose([
+        transforms.Normalize(),
+        transforms.RescaleRelative(),
+        transforms.Crop(args.square_edge),  # 368
+        transforms.CenterPad(args.square_edge),  # 368
+    ])
 
-    args = cli()
+    train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
 
+    # model
+    model = get_model(trunk='vgg19')
+    model = torch.nn.DataParallel(model).cuda()
+    # load pretrained
+    use_vgg(model)
+
+    # Fix the VGG weights first, and then the weights will be released
+    for i in range(20):
+        for param in model.module.model0[i].parameters():
+            param.requires_grad = False
+
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay,
+                                nesterov=args.nesterov)
+
+
+def train_coco():
     print("Loading dataset...")
     # load train data
     preprocess = transforms.Compose([
         transforms.Normalize(),
-        transforms.RandomApply(transforms.HFlip(), 0.5),
+        transforms.RandomApply(transforms.HFlip(), 0.5),  # Is it necessary ?
         transforms.RescaleRelative(),
-        transforms.Crop(args.square_edge),
-        transforms.CenterPad(args.square_edge),
+        transforms.Crop(args.square_edge),  # 368
+        transforms.CenterPad(args.square_edge),  # 368
     ])
     train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
 
@@ -362,3 +386,11 @@ if __name__ == '__main__':
         best_val_loss = min(val_loss, best_val_loss)
         if is_best:
             torch.save(model.state_dict(), model_save_filename)
+
+
+
+if __name__ == '__main__':
+    args = cli()
+    train_coco()
+
+

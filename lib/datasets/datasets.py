@@ -149,7 +149,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
             for ann in anns:
                 if 'keypoints' not in ann:
                     continue
-                if any(v > 0.0 for v in ann['keypoints'][2::3]):
+                if any(v > 0.0 for v in ann['keypoints'][2::3]):        # Only keeps instance with keypoint annotation.
                     return True
             return False
 
@@ -172,21 +172,27 @@ class CocoKeypoints(torch.utils.data.Dataset):
 
         image_info = self.coco.loadImgs(image_id)[0]
         self.log.debug(image_info)
+        # PIL image form
         with open(os.path.join(self.root, image_info['file_name']), 'rb') as f:
+            # original images of different sizes, ex: (480, 640), (500, 375), (501, 640)
             image = Image.open(f).convert('RGB')
 
+        # What is this ?
         meta_init = {
             'dataset_index': index,
             'image_id': image_id,
             'file_name': image_info['file_name'],
         }
 
-        image, anns, meta = self.preprocess(image, anns, None)
+        image, anns, meta = self.preprocess(image, anns, None)      # preprocessing -> image: (368, 368)
+                                                                    #                  anns:
+        print(type(anns))
+        print(anns)
 
         if isinstance(image, list):
             return self.multi_image_processing(image, anns, meta, meta_init)
 
-        return self.single_image_processing(image, anns, meta, meta_init)
+        return self.single_image_processing(image, anns, meta, meta_init)  # do processing -> image: torch [3, 368, 368]
 
     def multi_image_processing(self, image_list, anns_list, meta_list, meta_init):
         return list(zip(*[
@@ -198,8 +204,8 @@ class CocoKeypoints(torch.utils.data.Dataset):
         meta.update(meta_init)
 
         # transform image
-        original_size = image.size
-        image = self.image_transform(image)   # [3, 368, 368]
+        original_size = image.size     # (368, 368)
+        image = self.image_transform(image)   # do some transform -> [3, 368, 368]
         assert image.size(2) == original_size[0]
         assert image.size(1) == original_size[1]
 
@@ -353,8 +359,36 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
             image = Image.open(f).convert('RGB')
         image, ann, meta = self.preprocess(image, ann, None)
 
+        return self.single_bean_image_processing(image, ann, meta)
+
     def __len__(self):
         return len(self.anns)
+
+    def get_ground_truth(self, anns):
+        pass  # TODO
+
+    def bean_image_processing(self, image, anns, meta, meta_init):
+        meta.update(meta_init)
+
+        # transform image
+        original_size = image.size  # (368, 368)
+        image = self.image_transform(image)  # do some transform -> [3, 368, 368]
+        assert image.size(2) == original_size[0]
+        assert image.size(1) == original_size[1]
+
+        # mask valid
+        valid_area = meta['valid_area']
+        utils.mask_valid_area(image, valid_area)
+
+        self.log.debug(meta)
+
+        heatmaps, pafs = self.get_ground_truth(anns)
+
+        heatmaps = torch.from_numpy(
+            heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [19, 46, 46]
+
+        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [38, 46, 46]
+        return image, heatmaps, pafs
 
 
 class ImageList(torch.utils.data.Dataset):
