@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import os
 import numpy as np
@@ -61,6 +62,28 @@ def get_keypoints():
         'left_ear']
 
     return keypoints
+
+
+def get_soybean_keypoints():
+    """Get the soybean keypoints."""
+    keypoints = [
+        'first_bean',
+        'second_bean',
+        'third_bean',
+        'fourth_bean',
+        'fifth_bean'
+    ]
+    return keypoints
+
+
+def kp_soybean_connections(keypoints):
+    kp_lines = [
+        [keypoints.index('first_bean'), keypoints.index('second_bean')],
+        [keypoints.index('second_bean'), keypoints.index('third_bean')],
+        [keypoints.index('third_bean'), keypoints.index('fourth_bean')],
+        [keypoints.index('fourth_bean'), keypoints.index('fifth_bean')]
+    ]
+    return kp_lines
 
 
 def collate_images_anns_meta(batch):
@@ -149,7 +172,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
             for ann in anns:
                 if 'keypoints' not in ann:
                     continue
-                if any(v > 0.0 for v in ann['keypoints'][2::3]):        # Only keeps instance with keypoint annotation.
+                if any(v > 0.0 for v in ann['keypoints'][2::3]):  # Only keeps instance with keypoint annotation.
                     return True
             return False
 
@@ -184,10 +207,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
             'file_name': image_info['file_name'],
         }
 
-        image, anns, meta = self.preprocess(image, anns, None)      # preprocessing -> image: (368, 368)
-                                                                    #                  anns:
-        print(type(anns))
-        print(anns)
+        image, anns, meta = self.preprocess(image, anns, None)  # preprocessing -> image: (368, 368)
 
         if isinstance(image, list):
             return self.multi_image_processing(image, anns, meta, meta_init)
@@ -204,8 +224,8 @@ class CocoKeypoints(torch.utils.data.Dataset):
         meta.update(meta_init)
 
         # transform image
-        original_size = image.size     # (368, 368)
-        image = self.image_transform(image)   # do some transform -> [3, 368, 368]
+        original_size = image.size  # (368, 368)
+        image = self.image_transform(image)  # do some transform -> [3, 368, 368]
         assert image.size(2) == original_size[0]
         assert image.size(1) == original_size[1]
 
@@ -221,7 +241,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
             heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [19, 46, 46]
 
         pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [38, 46, 46]
-        return image, heatmaps, pafs
+        return image, heatmaps, pafs  # [3, 368, 368], [19, 46, 46], [38, 46, 46]
 
     def remove_illegal_joint(self, keypoints):
 
@@ -334,9 +354,12 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         self.input_x = input_x
         self.stride = stride
 
+        self.MAX_BEAN_COUNT = len(get_soybean_keypoints())
+        self.BEAN_CONNECTION_IDS = kp_soybean_connections(get_soybean_keypoints())
+
         for root, dir, files in os.walk(self.root):
-            print(root)
-            print(dir)
+            print('root:', root)
+            print('dir:', dir)
             i = 0
             while i < len(files):
                 if i + 1 == len(files):
@@ -354,18 +377,82 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         print('annotations:', len(self.anns))
 
     def __getitem__(self, index):
-        ann = self.anns[index]
+        ann_file_name = self.anns[index]
+        anns = self.loadAnns(ann_file_name)  # load annotation of one image
+        anns = copy.deepcopy(anns)
+
         with open(os.path.join(self.root, self.imgs[index]), 'rb') as f:
             image = Image.open(f).convert('RGB')
-        image, ann, meta = self.preprocess(image, ann, None)
+        image, anns, meta = self.preprocess(image, anns, None)
 
-        return self.single_bean_image_processing(image, ann, meta)
+        return self.bean_image_processing(image, anns, meta)
 
     def __len__(self):
         return len(self.anns)
 
+    def loadAnns(self, ann_file_name):
+        anns = json.load(ann_file_name)
+        return anns
+
     def get_ground_truth(self, anns):
-        pass  # TODO
+        grid_y = int(self.input_y / self.stride)
+        grid_x = int(self.input_x / self.stride)
+        channels_heat = (self.MAX_BEAN_COUNT + 1)           # FIXME Why plus 1?
+        channels_paf = 2 * len(self.BEAN_CONNECTION_IDS)
+        heatmaps = np.zeros((int(grid_y), int(grid_x), channels_heat))
+        pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
+
+        keypoints = []
+        dic = {}
+        shapes = anns['shapes']
+        for sh in shapes:
+            label = sh['label']
+            id = sh['group_id']
+            dic.setdefault(sh['group_id'], []).append(sh['points'])
+
+        for group_id, single_keypoints in dic:
+            if len(single_keypoints) < 5:
+                single_keypoints += [[0, 0] for _ in range(self.MAX_BEAN_COUNT - len(single_keypoints))]
+            keypoints.append(single_keypoints)
+
+        keypoints = np.array(keypoints)
+        keypoints = self.remove_illegal_joint(keypoints)
+
+        # confidence maps for beans
+        for i in range(self.MAX_BEAN_COUNT):
+            beans = [jo[i] for jo in keypoints]
+            for center in beans:
+                gaussian_map = heatmaps[:, :, i]
+                heatmaps[:, :, i] = putGaussianMaps(
+                    center, gaussian_map,
+                    7.0, grid_y, grid_x, self.stride)
+
+        # pafs
+        for i, (k1, k2) in enumerate(self.BEAN_CONNECTION_IDS):
+            # limb
+            count = np.zeros((int(grid_y), int(grid_x)), dtype=np.uint32)
+            for pod in keypoints:
+                centerA = pod[k1]
+                centerB = pod[k2]
+                vec_map = pafs[:, :, 2 * i:2 * (i + 1)]
+
+                pafs[:, :, 2 * i:2 * (i + 1)], count = putVecMaps(
+                    centerA=centerA,
+                    centerB=centerB,
+                    accumulate_vec_map=vec_map,
+                    count=count, grid_y=grid_y, grid_x=grid_x, stride=self.stride
+                )
+        return heatmaps, pafs
+
+    def remove_illegal_joint(self, keypoints):
+        MAGIC_CONSTANT = (-1, -1, 0)
+        mask = np.logical_or.reduce((keypoints[:, :, 0] >= self.input_x,
+                                     keypoints[:, :, 0] < 0,
+                                     keypoints[:, :, 1] >= self.input_y,
+                                     keypoints[:, :, 1] < 0))
+        keypoints[mask] = MAGIC_CONSTANT
+
+        return keypoints
 
     def bean_image_processing(self, image, anns, meta, meta_init):
         meta.update(meta_init)

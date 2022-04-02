@@ -16,12 +16,18 @@ from lib.network.rtpose_vgg import get_model, use_vgg
 from lib.datasets import coco, transforms, datasets
 from lib.config import update_config
 
-DATA_DIR = 'data\coco'
+SOURCE_DIR = os.path.dirname(os.getcwd())
+DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean')
 
-ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
-ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
-IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
-IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
+# ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
+# ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
+# IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
+# IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
+
+ANNOTATIONS_TRAIN = None
+ANNOTATIONS_VAL = None
+IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, '2055_1')
+IMAGE_DIR_VAL = os.path.join(DATA_DIR, '2055_1')
 
 
 def train_cli(parser):
@@ -64,7 +70,8 @@ def train_factory(args, preprocess, target_transforms):
     train_data = torch.utils.data.ConcatDataset(train_datas)  # shape: (56599, 3, 3, 368, 368)
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size, shuffle=True,
-        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True)
+        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True
+    )
 
     val_data = datasets.CocoKeypoints(
         root=args.val_image_dir,
@@ -83,7 +90,31 @@ def train_factory(args, preprocess, target_transforms):
 
 
 def bean_train_factory(args, preprocess, target_transforms):
-    train_data = None
+    train_data = [datasets.SoybeanKeypoints(
+        root=args.train_image_dir,
+        preprocess=preprocess,
+        image_transform=transforms.image_transform_train,
+        target_transforms=target_transforms,
+    )]
+
+    train_loader = torch.utils.data.DataLoader(
+        train_data, batch_size=args.batch_size, shuffle=True,
+        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True
+    )
+
+    val_data = datasets.SoybeanKeypoints(
+        root=args.val_image_dir,
+        preprocess=preprocess,
+        image_transform=transforms.image_transform_train,
+        target_transforms=target_transforms
+    )
+
+    val_loader = torch.utils.data.DataLoader(
+        val_data, batch_size=args.batch_size, shuffle=False,
+        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True)
+
+    return train_loader, val_loader, train_data, val_data
+
 
 
 def cli():
@@ -186,11 +217,6 @@ def train(train_loader, model, optimizer, epoch):
 
     end = time.time()
     for i, (img, heatmap_target, paf_target) in enumerate(train_loader):
-        # measure data loading time
-        # writer.add_text('Text', 'text logged at step:' + str(i), i)
-
-        # for name, param in model.named_parameters():
-        #    writer.add_histogram(name, param.clone().cpu().data.numpy(),i)        
         data_time.update(time.time() - end)
 
         img = img.cuda()
@@ -300,7 +326,7 @@ def train_soybean():
         transforms.CenterPad(args.square_edge),  # 368
     ])
 
-    train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
+    train_loader, val_loader, train_data, val_data = bean_train_factory(args, preprocess, target_transforms=None)
 
     # model
     model = get_model(trunk='vgg19')
@@ -318,6 +344,44 @@ def train_soybean():
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay,
                                 nesterov=args.nesterov)
+
+    for epoch in range(5):
+        # train for one epoch
+
+        train_loss = train(train_loader, model, optimizer, epoch)
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)
+
+        # Release all weights
+    for param in model.module.parameters():
+        param.requires_grad = True
+
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay,
+                                nesterov=args.nesterov)
+
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001,
+                                     threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+
+    best_val_loss = np.inf
+
+    model_save_filename = 'network/weight/best_pose.pth'
+    for epoch in range(5, args.epochs):
+
+        # train for one epoch
+        train_loss = train(train_loader, model, optimizer, epoch)
+
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)
+
+        lr_scheduler.step(val_loss)
+
+        is_best = val_loss < best_val_loss
+        best_val_loss = min(val_loss, best_val_loss)
+        if is_best:
+            torch.save(model.state_dict(), model_save_filename)
 
 
 def train_coco():
@@ -391,6 +455,6 @@ def train_coco():
 
 if __name__ == '__main__':
     args = cli()
-    train_coco()
+    train_soybean()
 
 
