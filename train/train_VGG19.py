@@ -16,18 +16,18 @@ from lib.network.rtpose_vgg import get_model, use_vgg
 from lib.datasets import coco, transforms, datasets
 from lib.config import update_config
 
-SOURCE_DIR = os.path.dirname(os.getcwd())
-DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean')
+SOURCE_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+DATA_DIR = os.path.join(SOURCE_DIR, 'data/coco')
 
-# ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
-# ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
-# IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
-# IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
+ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
+ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
+IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
+IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
 
-ANNOTATIONS_TRAIN = None
-ANNOTATIONS_VAL = None
-IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, '2055_1')
-IMAGE_DIR_VAL = os.path.join(DATA_DIR, '2055_1')
+# ANNOTATIONS_TRAIN = None
+# ANNOTATIONS_VAL = None
+# IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, '2055_1')
+# IMAGE_DIR_VAL = os.path.join(DATA_DIR, '2055_1')
 
 
 def train_cli(parser):
@@ -455,6 +455,6 @@ def train_coco():
 
 if __name__ == '__main__':
     args = cli()
-    train_soybean()
+    train_coco()
 
 
