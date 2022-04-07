@@ -404,7 +404,7 @@ def train_soybean():
                                                                         target_transforms=None)
 
     # model
-    model = get_model(trunk='vgg19')
+    model = get_model(dataset=NOW_WHAT, trunk='vgg19')
     model = torch.nn.DataParallel(model).cuda()
     # load pretrained
     use_vgg(model)
