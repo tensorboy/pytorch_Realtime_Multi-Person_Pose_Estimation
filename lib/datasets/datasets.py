@@ -7,6 +7,7 @@ import torch.utils.data
 import torchvision
 from PIL import Image
 
+from train.train_VGG19 import DATA_DIR
 from .heatmap import putGaussianMaps
 from .paf import putVecMaps
 from . import transforms, utils
@@ -33,7 +34,7 @@ def kp_connections(keypoints):
         [keypoints.index('nose'), keypoints.index('left_eye')],
         [keypoints.index('right_eye'), keypoints.index('right_ear')],
         [keypoints.index('left_eye'), keypoints.index('left_ear')]
-    ]
+    ]  # len: 19
     return kp_lines
 
 
@@ -59,7 +60,7 @@ def get_keypoints():
         'right_eye',
         'left_eye',
         'right_ear',
-        'left_ear']
+        'left_ear']     # len: 18
 
     return keypoints
 
@@ -72,7 +73,7 @@ def get_soybean_keypoints():
         'third_bean',
         'fourth_bean',
         'fifth_bean'
-    ]
+    ]      # len: 5
     return keypoints
 
 
@@ -82,7 +83,7 @@ def kp_soybean_connections(keypoints):
         [keypoints.index('second_bean'), keypoints.index('third_bean')],
         [keypoints.index('third_bean'), keypoints.index('fourth_bean')],
         [keypoints.index('fourth_bean'), keypoints.index('fifth_bean')]
-    ]
+    ]   # len: 4
     return kp_lines
 
 
@@ -244,7 +245,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
         return image, heatmaps, pafs  # [3, 368, 368], [19, 46, 46], [38, 46, 46]
 
     def remove_illegal_joint(self, keypoints):
-
+        # keypoints shape: (x, 18, 3), x is the number of keypoints in the image
         MAGIC_CONSTANT = (-1, -1, 0)
         mask = np.logical_or.reduce((keypoints[:, :, 0] >= self.input_x,
                                      keypoints[:, :, 0] < 0,
@@ -296,6 +297,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
         pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
 
         keypoints = []
+        # for each person in the image
         for ann in anns:
             single_keypoints = np.array(ann['keypoints']).reshape(17, 3)
             single_keypoints = self.add_neck(single_keypoints)
@@ -347,7 +349,7 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         self.root = root
         self.imgs = []
         self.anns = []
-        self.preprocess = preprocess or transforms.Normalize()
+        self.preprocess = preprocess or transforms.NormalizeBean()
         self.image_transform = image_transform or transforms.image_transform
         self.target_transforms = target_transforms
         self.input_y = input_y
@@ -356,7 +358,9 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
 
         self.MAX_BEAN_COUNT = len(get_soybean_keypoints())
         self.BEAN_CONNECTION_IDS = kp_soybean_connections(get_soybean_keypoints())
+        self.log = logging.getLogger(self.__class__.__name__)
 
+        # get all img paths and anns paths
         for root, dir, files in os.walk(self.root):
             print('root:', root)
             print('dir:', dir)
@@ -369,29 +373,35 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
                 name_ann, ext_ann = os.path.splitext(files[i + 1])
 
                 if ext_img == '.jpg' and ext_ann == '.json' and name_img == name_ann:
-                    self.imgs.append(files[i])
-                    self.anns.append(files[i + 1])
+                    self.imgs.append(os.path.join(root, files[i]))
+                    self.anns.append(os.path.join(root, files[i + 1]))
                 i += 2
 
-        print('images:', len(self.imgs))
-        print('annotations:', len(self.anns))
+        print('total images:', len(self.imgs))
+        print('total annotations:', len(self.anns))
 
     def __getitem__(self, index):
-        ann_file_name = self.anns[index]
-        anns = self.loadAnns(ann_file_name)  # load annotation of one image
+        ann_path = self.anns[index]
+        anns = self.loadAnns(ann_path)  # load annotation of one image
         anns = copy.deepcopy(anns)
 
         with open(os.path.join(self.root, self.imgs[index]), 'rb') as f:
             image = Image.open(f).convert('RGB')
-        image, anns, meta = self.preprocess(image, anns, None)
 
-        return self.bean_image_processing(image, anns, meta)
+        # What is this ?
+        meta_init = {
+            'image_path': anns['imagePath'],
+        }
+
+        image, anns, meta = self.preprocess(image, anns, None)
+        return self.bean_image_processing(image, anns, meta, meta_init)
 
     def __len__(self):
         return len(self.anns)
 
-    def loadAnns(self, ann_file_name):
-        anns = json.load(ann_file_name)
+    def loadAnns(self, ann_path):
+        f = open(ann_path)
+        anns = json.load(f)
         return anns
 
     def get_ground_truth(self, anns):
@@ -403,16 +413,12 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
 
         keypoints = []
-        dic = {}
-        shapes = anns['shapes']
-        for sh in shapes:
-            label = sh['label']
-            id = sh['group_id']
-            dic.setdefault(sh['group_id'], []).append(sh['points'])
 
-        for group_id, single_keypoints in dic:
+        keypoints = []
+        for ann in anns:
+            single_keypoints = ann['keypoints']
             if len(single_keypoints) < 5:
-                single_keypoints += [[0, 0] for _ in range(self.MAX_BEAN_COUNT - len(single_keypoints))]
+                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5 - len(single_keypoints)))))
             keypoints.append(single_keypoints)
 
         keypoints = np.array(keypoints)
@@ -445,7 +451,8 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         return heatmaps, pafs
 
     def remove_illegal_joint(self, keypoints):
-        MAGIC_CONSTANT = (-1, -1, 0)
+        # keypoints shape: (x, 5, 2), x is the number of keypoints in the image
+        MAGIC_CONSTANT = (-1, -1)    # replace illegal point location to MAGIC_CONSTANT
         mask = np.logical_or.reduce((keypoints[:, :, 0] >= self.input_x,
                                      keypoints[:, :, 0] < 0,
                                      keypoints[:, :, 1] >= self.input_y,
@@ -472,9 +479,11 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         heatmaps, pafs = self.get_ground_truth(anns)
 
         heatmaps = torch.from_numpy(
-            heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [19, 46, 46]
+            heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [6, 46, 46] (6 = 5 bean max + 1 background)
+        print('heatmaps shape:', heatmaps.shape)
+        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [8, 46, 46]  (8 = 4 connections * 2 vector dim)
+        print('pafs shape:', pafs.shape)
 
-        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [38, 46, 46]
         return image, heatmaps, pafs
 
 

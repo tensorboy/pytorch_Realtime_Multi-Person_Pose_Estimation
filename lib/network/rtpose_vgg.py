@@ -10,6 +10,9 @@ import torch.utils.model_zoo as model_zoo
 from torch.autograd import Variable
 from torch.nn import init
 
+# from train.train_VGG19 import NOW_WHAT
+
+
 def make_stages(cfg_dict):
     """Builds CPM stages from a dictionary
     Args:
@@ -56,14 +59,16 @@ def make_vgg19_block(block):
     return nn.Sequential(*layers)
 
 
-
-def get_model(trunk='vgg19'):
+def get_model(dataset='coco', trunk='vgg19'):
     """Creates the whole CPM model
     Args:
+        dataset: string, 'coco' or 'bean'
         trunk: string, 'vgg19' or 'mobilenet'
     Returns: Module, the defined model
     """
     blocks = {}
+    S_out_shape = 19 if dataset == 'coco' else 6
+    L_out_shape = 38 if dataset == 'coco' else 8
     # block0 is the preprocessing stage
     if trunk == 'vgg19':
         block0 = [{'conv1_1': [3, 64, 3, 1, 1]},
@@ -96,13 +101,13 @@ def get_model(trunk='vgg19'):
                           {'conv5_2_CPM_L1': [128, 128, 3, 1, 1]},
                           {'conv5_3_CPM_L1': [128, 128, 3, 1, 1]},
                           {'conv5_4_CPM_L1': [128, 512, 1, 1, 0]},
-                          {'conv5_5_CPM_L1': [512, 38, 1, 1, 0]}]
+                          {'conv5_5_CPM_L1': [512, L_out_shape, 1, 1, 0]}]
 
     blocks['block1_2'] = [{'conv5_1_CPM_L2': [128, 128, 3, 1, 1]},
                           {'conv5_2_CPM_L2': [128, 128, 3, 1, 1]},
                           {'conv5_3_CPM_L2': [128, 128, 3, 1, 1]},
                           {'conv5_4_CPM_L2': [128, 512, 1, 1, 0]},
-                          {'conv5_5_CPM_L2': [512, 19, 1, 1, 0]}]
+                          {'conv5_5_CPM_L2': [512, S_out_shape, 1, 1, 0]}]
 
     # Stages 2 - 6
     for i in range(2, 7):
@@ -113,7 +118,7 @@ def get_model(trunk='vgg19'):
             {'Mconv4_stage%d_L1' % i: [128, 128, 7, 1, 3]},
             {'Mconv5_stage%d_L1' % i: [128, 128, 7, 1, 3]},
             {'Mconv6_stage%d_L1' % i: [128, 128, 1, 1, 0]},
-            {'Mconv7_stage%d_L1' % i: [128, 38, 1, 1, 0]}
+            {'Mconv7_stage%d_L1' % i: [128, L_out_shape, 1, 1, 0]}
         ]
 
         blocks['block%d_2' % i] = [
@@ -123,7 +128,7 @@ def get_model(trunk='vgg19'):
             {'Mconv4_stage%d_L2' % i: [128, 128, 7, 1, 3]},
             {'Mconv5_stage%d_L2' % i: [128, 128, 7, 1, 3]},
             {'Mconv6_stage%d_L2' % i: [128, 128, 1, 1, 0]},
-            {'Mconv7_stage%d_L2' % i: [128, 19, 1, 1, 0]}
+            {'Mconv7_stage%d_L2' % i: [128, S_out_shape, 1, 1, 0]}
         ]
 
     models = {}
@@ -156,10 +161,10 @@ def get_model(trunk='vgg19'):
             self._initialize_weights_norm()
 
         def forward(self, x):
-
             saved_for_loss = []
+            print(x.shape)
             out1 = self.model0(x)
-
+            print(out1.shape)
             out1_1 = self.model1_1(out1)
             out1_2 = self.model1_2(out1)
             out2 = torch.cat([out1_1, out1_2, out1], 1)
@@ -233,7 +238,6 @@ def get_model(trunk='vgg19'):
 
 
 def use_vgg(model):
-
     url = 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'
     vgg_state_dict = model_zoo.load_url(url)
     vgg_keys = vgg_state_dict.keys()
@@ -243,7 +247,7 @@ def use_vgg(model):
     # weight+bias,weight+bias.....(repeat 10 times)
     for i in range(20):
         weights_load[list(model.state_dict().keys())[i]
-                     ] = vgg_state_dict[list(vgg_keys)[i]]
+        ] = vgg_state_dict[list(vgg_keys)[i]]
 
     state = model.state_dict()
     state.update(weights_load)

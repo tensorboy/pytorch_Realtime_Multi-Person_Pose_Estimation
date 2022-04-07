@@ -122,19 +122,34 @@ class Normalize(Preprocess):
 
         return image, anns, meta
 
+# Normalize image / ann settings
 class NormalizeBean(Preprocess):
     @staticmethod
     def normalize_annotations(anns):
         anns = copy.deepcopy(anns)
-
         # convert as much data as possible to numpy arrays to avoid every float
         # being turned into its own torch.Tensor()
-        for ann in anns:
-            ann['keypoints'] = np.asarray(ann['keypoints'], dtype=np.float32).reshape(-1, 3)
-            ann['bbox'] = np.asarray(ann['bbox'], dtype=np.float32)
-            ann['bbox_original'] = np.copy(ann['bbox'])
 
-        return anns
+        del anns['imageData']
+        shapes = anns['shapes']
+        dic = {}
+        for sh in shapes:
+            item = copy.deepcopy(sh)
+            del item['group_id']
+            del item['shape_type']
+            del item['flags']
+            dic.setdefault(sh['group_id'], []).append(item)
+
+        for k, v in dic.items():
+            v.sort(key=lambda i: i['label'])
+
+        res = []
+        for k, v in dic.items():
+            bean = {'group_id': k,
+                    'keypoints': np.asarray([item['points'][0] for item in v], dtype=np.float32),
+                    'unknown_count': v[0]['label'] == '0-0'}
+            res.append(bean)
+        return res
 
     def __call__(self, image, anns, meta):
         anns = self.normalize_annotations(anns)
@@ -237,6 +252,53 @@ class RescaleRelative(Preprocess):
 
         return image, anns, np.array((x_scale, y_scale))
 
+
+class RescaleRelativeBean(Preprocess):
+    def __init__(self, scale_range=(0.5, 1.0), *, resample=PIL.Image.BICUBIC):
+        self.log = logging.getLogger(self.__class__.__name__)
+        self.scale_range = scale_range
+        self.resample = resample
+
+    def __call__(self, image, anns, meta):
+        meta = copy.deepcopy(meta)
+        anns = copy.deepcopy(anns)
+
+        if isinstance(self.scale_range, tuple):
+            scale_factor = (
+                self.scale_range[0] +
+                torch.rand(1).item() * (self.scale_range[1] - self.scale_range[0])
+            )
+        else:
+            scale_factor = self.scale_range
+
+        image, anns, scale_factors = self.scale(image, anns, scale_factor)
+        self.log.debug('meta before: %s', meta)
+        meta['offset'] *= scale_factors
+        meta['scale'] *= scale_factors
+        meta['valid_area'][:2] *= scale_factors
+        meta['valid_area'][2:] *= scale_factors
+        self.log.debug('meta after: %s', meta)
+
+        for ann in anns:
+            ann['valid_area'] = meta['valid_area']
+
+        return image, anns, meta
+
+    def scale(self, image, anns, factor):
+        # scale image
+        w, h = image.size
+        image = image.resize((int(w * factor), int(h * factor)), self.resample)
+        self.log.debug('before resize = (%f, %f), after = %s', w, h, image.size)
+
+        # rescale keypoints
+        x_scale = image.size[0] / w
+        y_scale = image.size[1] / h
+
+        for ann in anns:
+            ann['keypoints'][:, 0] = (ann['keypoints'][:, 0] + 0.5) * x_scale - 0.5
+            ann['keypoints'][:, 1] = (ann['keypoints'][:, 1] + 0.5) * y_scale - 0.5
+
+        return image, anns, np.array((x_scale, y_scale))
 
 class RescaleAbsolute(Preprocess):
     def __init__(self, long_edge, *, resample=PIL.Image.BICUBIC):
@@ -343,6 +405,56 @@ class Crop(Preprocess):
         return image, anns, np.array(ltrb)
 
 
+class CropBean(Preprocess):
+    def __init__(self, long_edge):
+        self.log = logging.getLogger(self.__class__.__name__)
+        self.long_edge = long_edge
+
+    def __call__(self, image, anns, meta):
+        meta = copy.deepcopy(meta)
+        anns = copy.deepcopy(anns)
+
+        image, anns, ltrb = self.crop(image, anns)
+        meta['offset'] += ltrb[:2]
+
+        self.log.debug('valid area before crop of %s: %s', ltrb, meta['valid_area'])
+        # process crops from left and top
+        meta['valid_area'][:2] = np.maximum(0.0, meta['valid_area'][:2] - ltrb[:2])
+        meta['valid_area'][2:] = np.maximum(0.0, meta['valid_area'][2:] - ltrb[:2])
+        # process cropps from right and bottom
+        meta['valid_area'][2:] = np.minimum(meta['valid_area'][2:], ltrb[2:] - ltrb[:2])
+        self.log.debug('valid area after crop: %s', meta['valid_area'])
+
+        for ann in anns:
+            ann['valid_area'] = meta['valid_area']
+
+        return image, anns, meta
+
+    def crop(self, image, anns):
+        w, h = image.size
+        padding = int(self.long_edge / 2.0)
+        x_offset, y_offset = 0, 0
+        if w > self.long_edge:
+            x_offset = torch.randint(-padding, w - self.long_edge + padding, (1,))
+            x_offset = torch.clamp(x_offset, min=0, max=w - self.long_edge).item()
+        if h > self.long_edge:
+            y_offset = torch.randint(-padding, h - self.long_edge + padding, (1,))
+            y_offset = torch.clamp(y_offset, min=0, max=h - self.long_edge).item()
+        self.log.debug('crop offsets (%d, %d)', x_offset, y_offset)
+
+        # crop image
+        new_w = min(self.long_edge, w - x_offset)
+        new_h = min(self.long_edge, h - y_offset)
+        ltrb = (x_offset, y_offset, x_offset + new_w, y_offset + new_h)
+        image = image.crop(ltrb)
+
+        # crop keypoints
+        for ann in anns:
+            ann['keypoints'][:, 0] -= x_offset
+            ann['keypoints'][:, 1] -= y_offset
+
+        return image, anns, np.array(ltrb)
+
 class CenterPad(Preprocess):
     def __init__(self, target_size):
         self.log = logging.getLogger(self.__class__.__name__)
@@ -390,6 +502,51 @@ class CenterPad(Preprocess):
             ann['bbox'][1] += ltrb[1]
         return image, anns, ltrb
 
+class CenterPadBean(Preprocess):
+    def __init__(self, target_size):
+        self.log = logging.getLogger(self.__class__.__name__)
+
+        if isinstance(target_size, int):
+            target_size = (target_size, target_size)
+        self.target_size = target_size
+
+    def __call__(self, image, anns, meta):
+        meta = copy.deepcopy(meta)
+        anns = copy.deepcopy(anns)
+
+        image, anns, ltrb = self.center_pad(image, anns)
+        meta['offset'] -= ltrb[:2]
+
+        self.log.debug('valid area before pad with %s: %s', ltrb, meta['valid_area'])
+        meta['valid_area'][:2] += ltrb[:2]
+        self.log.debug('valid area after pad: %s', meta['valid_area'])
+
+        for ann in anns:
+            ann['valid_area'] = meta['valid_area']
+
+        return image, anns, meta
+
+    def center_pad(self, image, anns):
+        w, h = image.size
+        left = int((self.target_size[0] - w) / 2.0)
+        top = int((self.target_size[1] - h) / 2.0)
+        ltrb = (
+            left,
+            top,
+            self.target_size[0] - w - left,
+            self.target_size[1] - h - top,
+        )
+
+        # pad image
+        image = torchvision.transforms.functional.pad(
+            image, ltrb, fill=(124, 116, 104))
+
+        # pad annotations
+        for ann in anns:
+            ann['keypoints'][:, 0] += ltrb[0]
+            ann['keypoints'][:, 1] += ltrb[1]
+        return image, anns, ltrb
+
 
 class HFlip(Preprocess):
     def __init__(self, *, swap=horizontal_swap_coco):
@@ -417,6 +574,30 @@ class HFlip(Preprocess):
 
         return image, anns, meta
 
+class HFlipBean(Preprocess):
+    def __init__(self, *, swap=horizontal_swap_coco):
+        self.swap = swap
+
+    def __call__(self, image, anns, meta):
+        meta = copy.deepcopy(meta)
+        anns = copy.deepcopy(anns)
+
+        w, _ = image.size
+        image = image.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        for ann in anns:
+            ann['keypoints'][:, 0] = -ann['keypoints'][:, 0] - 1.0 + w
+            if self.swap is not None:
+                ann['keypoints'] = self.swap(ann['keypoints'])
+                meta['horizontal_swap'] = self.swap
+
+        assert meta['hflip'] is False
+        meta['hflip'] = True
+
+        meta['valid_area'][0] = -(meta['valid_area'][0] + meta['valid_area'][2]) + w
+        for ann in anns:
+            ann['valid_area'] = meta['valid_area']
+
+        return image, anns, meta
 
 class RandomApply(Preprocess):
     def __init__(self, transform, probability):

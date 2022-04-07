@@ -1,10 +1,10 @@
 import argparse
-import time
 import os
-import numpy as np
+import sys
+import time
 from collections import OrderedDict
 
-import sys
+import numpy as np
 
 sys.path.append(os.path.abspath("./"))
 
@@ -13,21 +13,27 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from lib.network.rtpose_vgg import get_model, use_vgg
-from lib.datasets import coco, transforms, datasets
-from lib.config import update_config
+from lib.datasets import transforms, datasets
 
 SOURCE_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-DATA_DIR = os.path.join(SOURCE_DIR, 'data/coco')
 
-ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
-ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
-IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
-IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
+NOW_WHAT = 'bean'
 
-# ANNOTATIONS_TRAIN = None
-# ANNOTATIONS_VAL = None
-# IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, '2055_1')
-# IMAGE_DIR_VAL = os.path.join(DATA_DIR, '2055_1')
+if NOW_WHAT == 'coco':
+    # For coco dataset training
+    DATA_DIR = os.path.join(SOURCE_DIR, 'data/coco')
+    ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
+    ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
+    IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
+    IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
+
+elif NOW_WHAT == 'bean':
+    # For soybean dataset training
+    DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean')
+    ANNOTATIONS_TRAIN = None
+    ANNOTATIONS_VAL = None
+    IMAGE_DIR_TRAIN = DATA_DIR
+    IMAGE_DIR_VAL = DATA_DIR
 
 
 def train_cli(parser):
@@ -116,7 +122,6 @@ def bean_train_factory(args, preprocess, target_transforms):
     return train_loader, val_loader, train_data, val_data
 
 
-
 def cli():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -178,6 +183,7 @@ def get_loss(saved_for_loss, heat_temp, vec_temp):
         pred2 = saved_for_loss[2 * j + 1]
 
         # Compute losses
+        print('shapes:', pred1.shape, vec_temp.shape)
         loss1 = criterion(pred1, vec_temp)
         loss2 = criterion(pred2, heat_temp)
 
@@ -317,73 +323,6 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train_soybean():
-    print("Loading dataset...")
-    preprocess = transforms.Compose([
-        transforms.Normalize(),
-        transforms.RescaleRelative(),
-        transforms.Crop(args.square_edge),  # 368
-        transforms.CenterPad(args.square_edge),  # 368
-    ])
-
-    train_loader, val_loader, train_data, val_data = bean_train_factory(args, preprocess, target_transforms=None)
-
-    # model
-    model = get_model(trunk='vgg19')
-    model = torch.nn.DataParallel(model).cuda()
-    # load pretrained
-    use_vgg(model)
-
-    # Fix the VGG weights first, and then the weights will be released
-    for i in range(20):
-        for param in model.module.model0[i].parameters():
-            param.requires_grad = False
-
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay,
-                                nesterov=args.nesterov)
-
-    for epoch in range(5):
-        # train for one epoch
-
-        train_loss = train(train_loader, model, optimizer, epoch)
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        # Release all weights
-    for param in model.module.parameters():
-        param.requires_grad = True
-
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay,
-                                nesterov=args.nesterov)
-
-    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001,
-                                     threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
-
-    best_val_loss = np.inf
-
-    model_save_filename = 'network/weight/best_pose.pth'
-    for epoch in range(5, args.epochs):
-
-        # train for one epoch
-        train_loss = train(train_loader, model, optimizer, epoch)
-
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        lr_scheduler.step(val_loss)
-
-        is_best = val_loss < best_val_loss
-        best_val_loss = min(val_loss, best_val_loss)
-        if is_best:
-            torch.save(model.state_dict(), model_save_filename)
-
-
 def train_coco():
     print("Loading dataset...")
     # load train data
@@ -397,6 +336,74 @@ def train_coco():
     train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
 
     # model
+    model = get_model(dataset=NOW_WHAT, trunk='vgg19')
+    model = torch.nn.DataParallel(model).cuda()
+    # load pretrained
+    use_vgg(model)
+
+    # Fix the VGG weights first, and then the weights will be released
+    for i in range(20):
+        for param in model.module.model0[i].parameters():
+            param.requires_grad = False
+
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay,
+                                nesterov=args.nesterov)
+
+    for epoch in range(5):
+        # train for one epoch
+
+        train_loss = train(train_loader, model, optimizer, epoch)
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)
+
+        # Release all weights
+    for param in model.module.parameters():
+        param.requires_grad = True
+
+    trainable_vars = [param for param in model.parameters() if param.requires_grad]
+    optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay,
+                                nesterov=args.nesterov)
+
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001,
+                                     threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+
+    best_val_loss = np.inf
+
+    model_save_filename = 'network/weight/best_pose.pth'
+    for epoch in range(5, args.epochs):
+
+        # train for one epoch
+        train_loss = train(train_loader, model, optimizer, epoch)
+
+        # evaluate on validation set
+        val_loss = validate(val_loader, model, epoch)
+
+        lr_scheduler.step(val_loss)
+
+        is_best = val_loss < best_val_loss
+        best_val_loss = min(val_loss, best_val_loss)
+        if is_best:
+            torch.save(model.state_dict(), model_save_filename)
+
+
+def train_soybean():
+    print("Loading dataset...")
+    preprocess = transforms.Compose([  # TODO: adapt preprocess to new json format
+        transforms.NormalizeBean(),
+        transforms.RescaleRelativeBean(),
+        transforms.CropBean(args.square_edge),  # 368
+        transforms.CenterPadBean(args.square_edge),  # 368
+    ])
+
+    train_loader, val_loader, train_data, val_data = bean_train_factory(args, preprocess=preprocess,
+                                                                        target_transforms=None)
+
+    # model
     model = get_model(trunk='vgg19')
     model = torch.nn.DataParallel(model).cuda()
     # load pretrained
@@ -452,9 +459,9 @@ def train_coco():
             torch.save(model.state_dict(), model_save_filename)
 
 
-
 if __name__ == '__main__':
     args = cli()
-    train_coco()
-
-
+    if NOW_WHAT == 'coco':
+        train_coco()
+    elif NOW_WHAT == 'bean':
+        train_soybean()
