@@ -9,11 +9,11 @@ from lib.network.rtpose_vgg import get_model, use_vgg
 from lib.network.openpose import OpenPose_Model, use_vgg
 from torch import load
 
-#Notice, if you using the 
+# Notice, if you using the
 with torch.autograd.no_grad():
     # this path is with respect to the root of the project
     weight_name = '/data/rtpose/rtpose_lr001/1/_ckpt_epoch_82.ckpt'
-    weight_path = 'best_pose.pth'
+    weight_path = 'network/weight/4.8/best_pose.pth'
     # state_dict = torch.load(weight_name)['state_dict']
     
     # new_state_dict = OrderedDict()

@@ -13,6 +13,7 @@ from .paf import putVecMaps
 from . import transforms, utils
 
 
+
 def kp_connections(keypoints):
     kp_lines = [
         [keypoints.index('neck'), keypoints.index('right_hip')],
@@ -75,6 +76,7 @@ def get_soybean_keypoints():
         'fifth_bean'
     ]      # len: 5
     return keypoints
+
 
 
 def kp_soybean_connections(keypoints):
@@ -413,14 +415,11 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
 
         keypoints = []
-
-        keypoints = []
         for ann in anns:
             single_keypoints = ann['keypoints']
             if len(single_keypoints) < 5:
-                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5 - len(single_keypoints)))))
+                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))
             keypoints.append(single_keypoints)
-
         keypoints = np.array(keypoints)
         keypoints = self.remove_illegal_joint(keypoints)
 
@@ -458,7 +457,6 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
                                      keypoints[:, :, 1] >= self.input_y,
                                      keypoints[:, :, 1] < 0))
         keypoints[mask] = MAGIC_CONSTANT
-
         return keypoints
 
     def bean_image_processing(self, image, anns, meta, meta_init):
@@ -478,11 +476,11 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
 
         heatmaps, pafs = self.get_ground_truth(anns)
 
-        heatmaps = torch.from_numpy(
-            heatmaps.transpose((2, 0, 1)).astype(np.float32))  # [6, 46, 46] (6 = 5 bean max + 1 background)
-        print('heatmaps shape:', heatmaps.shape)
-        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))  # [8, 46, 46]  (8 = 4 connections * 2 vector dim)
-        print('pafs shape:', pafs.shape)
+        # [6, 46, 46] (6 = 5 bean max + 1 background)
+        heatmaps = torch.from_numpy(heatmaps.transpose((2, 0, 1)).astype(np.float32))
+
+        # [8, 46, 46]  (8 = 4 connections * 2 vector dim)
+        pafs = torch.from_numpy(pafs.transpose((2, 0, 1)).astype(np.float32))
 
         return image, heatmaps, pafs
 

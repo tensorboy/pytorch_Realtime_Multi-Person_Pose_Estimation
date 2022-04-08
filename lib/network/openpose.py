@@ -111,7 +111,7 @@ class StageBlock(nn.Module):
 class OpenPose_Model(nn.Module):
     def __init__(self, l2_stages=4, l1_stages=2,
                 paf_out_channels=14, heat_out_channels=9):
-        '''
+        """
         :param feature_extractor:
         :param l2_stages:
         :param l1_stages:
@@ -120,11 +120,12 @@ class OpenPose_Model(nn.Module):
         :param stage_input_mode: either 'from_first_stage' (original)
         or 'from_previous_stage' (i.e. take x_out from previous stage as
         input to next stage).
-        '''
+        """
         super(OpenPose_Model, self).__init__()
         self.stages = [0, 1]
         # Backbone - feature extractor
         self.feature_extractor = make_vgg19_block()
+
         # L2 Stages
         L2_IN_CHS = [128]
         L2_INNER_CHS = [96]
@@ -151,7 +152,7 @@ class OpenPose_Model(nn.Module):
             L1_INNEROUT_CHS.append(512)
             L1_OUT_CHS.append(heat_out_channels)
         self.l1_stages = nn.ModuleList([
-            StageBlock(in_channels=L1_IN_CHS[i], inner_channels=L1_INNER_CHS[i], 
+            StageBlock(in_channels=L1_IN_CHS[i], inner_channels=L1_INNER_CHS[i],
                        innerout_channels=L1_INNEROUT_CHS[i], out_channels=L1_OUT_CHS[i])
             for i in range(len(L1_IN_CHS))
         ])
@@ -210,7 +211,6 @@ class OpenPose_Model(nn.Module):
 
     
 def use_vgg(model):
-
     url = 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth'
     vgg_state_dict = model_zoo.load_url(url)
     vgg_keys = vgg_state_dict.keys()
@@ -219,8 +219,7 @@ def use_vgg(model):
     weights_load = {}
     # weight+bias,weight+bias.....(repeat 10 times)
     for i in range(20):
-        weights_load[list(model.state_dict().keys())[i]
-                     ] = vgg_state_dict[list(vgg_keys)[i]]
+        weights_load[list(model.state_dict().keys())[i]] = vgg_state_dict[list(vgg_keys)[i]]
 
     state = model.state_dict()
     state.update(weights_load)

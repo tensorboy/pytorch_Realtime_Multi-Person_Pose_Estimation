@@ -22,6 +22,7 @@ import cv2
 import torch
 import torchvision
 from functools import partial, reduce
+
 from .utils import horizontal_swap_coco
 
 
@@ -109,7 +110,6 @@ class Normalize(Preprocess):
 
     def __call__(self, image, anns, meta):
         anns = self.normalize_annotations(anns)
-
         if meta is None:
             w, h = image.size
             meta = {
@@ -126,6 +126,8 @@ class Normalize(Preprocess):
 class NormalizeBean(Preprocess):
     @staticmethod
     def normalize_annotations(anns):
+        from .datasets import get_soybean_keypoints
+
         anns = copy.deepcopy(anns)
         # convert as much data as possible to numpy arrays to avoid every float
         # being turned into its own torch.Tensor()
@@ -144,9 +146,13 @@ class NormalizeBean(Preprocess):
             v.sort(key=lambda i: i['label'])
 
         res = []
+        MAX_BEAN_COUNT = len(get_soybean_keypoints())
         for k, v in dic.items():
+            if len(v) > MAX_BEAN_COUNT:
+                logging.warning(f"pod with {len(v)} beans!! (group_id: {k})"
+                                f"Please check if there is an error in the annotation file:\n{anns['imagePath']}")
             bean = {'group_id': k,
-                    'keypoints': np.asarray([item['points'][0] for item in v], dtype=np.float32),
+                    'keypoints': np.asarray([item['points'][0] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
                     'unknown_count': v[0]['label'] == '0-0'}
             res.append(bean)
         return res
@@ -598,6 +604,7 @@ class HFlipBean(Preprocess):
             ann['valid_area'] = meta['valid_area']
 
         return image, anns, meta
+
 
 class RandomApply(Preprocess):
     def __init__(self, transform, probability):

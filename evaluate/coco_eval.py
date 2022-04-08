@@ -93,7 +93,7 @@ def get_outputs(img, model, preprocess):
     if preprocess == 'rtpose':
         im_data = rtpose_preprocess(im_croped)
 
-    elif preprocess == 'vgg':
+    elif preprocess == 'vgg19':
         im_data = vgg_preprocess(im_croped)
 
     elif preprocess == 'inception':

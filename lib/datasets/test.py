@@ -68,13 +68,13 @@ for k, v in dic.items():
     res.append(bean)
 anns = res
 print(anns)
+
 keypoints = []
 for ann in anns:
     single_keypoints = ann['keypoints']
     if len(single_keypoints) < 5:
-        single_keypoints += [[0, 0] for _ in range(5 - len(single_keypoints))]
+        single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))
     keypoints.append(single_keypoints)
-
 keypoints = np.array(keypoints)
 
 

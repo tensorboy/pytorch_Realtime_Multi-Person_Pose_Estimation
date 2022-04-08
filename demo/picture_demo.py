@@ -26,11 +26,21 @@ from lib.utils.paf_to_pose import paf_to_pose_cpp
 from lib.config import cfg, update_config
 
 
+NOW_WHAT = 'bean'
+TRUNK = 'vgg19'
+FROM_SCRATCH = True
+img_name = 'subway.jpg'
+
+# weight_path = 'pose_model.pth'
+weight_path = 'network/weight/4.8/best_bean.pth'
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--cfg', help='experiment configure file name',
                     default='./experiments/vgg19_368x368_sgd.yaml', type=str)
+
 parser.add_argument('--weight', type=str,
-                    default='pose_model.pth')
+                    default=weight_path)
+
 parser.add_argument('opts',
                     help="Modify config options using the command-line",
                     default=None,
@@ -40,23 +50,26 @@ args = parser.parse_args()
 # update config file
 update_config(cfg, args)
 
+model = get_model(trunk=TRUNK, dataset=NOW_WHAT)
+wts_dict = torch.load(args.weight)
 
+# for model trained from scratch
+if FROM_SCRATCH:
+    wts_dict = {k.replace('module.', ''): v for k, v in wts_dict.items()}
 
-model = get_model('vgg19')     
-model.load_state_dict(torch.load(args.weight))
+model.load_state_dict(wts_dict)
 model = torch.nn.DataParallel(model).cuda()
 model.float()
 model.eval()
 
-img_name = 'subway.jpg'
+
 test_image = os.path.join('./readme/', img_name)
 oriImg = cv2.imread(test_image) # B,G,R order
 shape_dst = np.min(oriImg.shape[0:2])
 
 # Get results of original image
-
 with torch.no_grad():
-    paf, heatmap, im_scale = get_outputs(oriImg, model,  'rtpose')
+    paf, heatmap, im_scale = get_outputs(oriImg, model, TRUNK)
 
 print("im_scale:", im_scale)
 
