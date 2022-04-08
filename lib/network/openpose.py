@@ -64,6 +64,7 @@ class ConvBlock(nn.Module):
 class StageBlock(nn.Module):
     """ L1/L2 StageBlock Template """
     def __init__(self, in_channels, inner_channels, innerout_channels, out_channels):
+        # See OPENPOSE paper Fig.3
         super(StageBlock, self).__init__()
         self.Mconv1_0 = ConvBlock(in_channels, inner_channels)
         self.Mconv1_1 = ConvBlock(inner_channels, inner_channels)
@@ -167,14 +168,15 @@ class OpenPose_Model(nn.Module):
         for l2_stage in self.l2_stages:
             paf_pred = l2_stage(x_in)
             x_in = torch.cat([features, paf_pred], 1)
-            paf_ret.append(paf_pred)
+            paf_ret.append(paf_pred)    # save stage paf results
         # L1 Stage inference
         for l1_stage in self.l1_stages:
             heat_pred = l1_stage(x_in)
             x_in = torch.cat([features, heat_pred, paf_pred], 1)
-            heat_ret.append(heat_pred)
+            heat_ret.append(heat_pred)  # save stage heatmap results
         saved_for_loss.append(paf_ret)
         saved_for_loss.append(heat_ret)
+        # saved_for_loss: [[xx, xx, xx, xx, xx, xx], [xx, xx, xx, xx, xx, xx]]
         return [(paf_ret[-2], heat_ret[-2]), (paf_ret[-1], heat_ret[-1])], saved_for_loss
 
     def _initialize_weights_norm(self):
