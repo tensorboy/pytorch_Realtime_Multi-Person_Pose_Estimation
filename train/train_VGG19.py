@@ -25,7 +25,7 @@ if NOW_WHAT == 'coco':
     ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
     IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
     IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
-    BATCH_SIZE = 72
+    BATCH_SIZE = 5
 
 elif NOW_WHAT == 'bean':
     # For soybean dataset training
@@ -178,7 +178,7 @@ def get_loss(saved_for_loss, heat_temp, vec_temp):
     saved_for_log = OrderedDict()
     criterion = nn.MSELoss(reduction='mean').cuda()
     total_loss = 0
-
+    # print(vec_temp.shape)       # torch.Size([batch_size, 38, 46, 46])
     for j in range(6):
         pred1 = saved_for_loss[2 * j]
         pred2 = saved_for_loss[2 * j + 1]

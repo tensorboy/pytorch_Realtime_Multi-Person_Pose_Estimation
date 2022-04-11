@@ -66,11 +66,14 @@ for k, v in dic.items():
             'keypoints': np.asarray([item['points'][0] for item in v], dtype=np.float32),
             'unknown_count': v[0]['label'] == '0-0'}
     res.append(bean)
-anns = res
+anns = {
+        'imagePath': anns['imagePath'],
+        'annotations': res
+}
 print(anns)
 
 keypoints = []
-for ann in anns:
+for ann in anns['annotations']:
     single_keypoints = ann['keypoints']
     if len(single_keypoints) < 5:
         single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))

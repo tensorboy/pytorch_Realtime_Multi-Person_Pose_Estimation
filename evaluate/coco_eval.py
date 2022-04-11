@@ -85,6 +85,7 @@ def get_outputs(img, model, preprocess):
     :returns: numpy arrays, the averaged paf and heatmap
     """
     inp_size = cfg.DATASET.IMAGE_SIZE
+    assert preprocess in ['rtpose', 'vgg19', 'inception', 'ssd']
 
     # padding
     im_croped, im_scale, real_shape = im_transform.crop_with_factor(
@@ -102,7 +103,7 @@ def get_outputs(img, model, preprocess):
     elif preprocess == 'ssd':
         im_data = ssd_preprocess(im_croped)
 
-    batch_images= np.expand_dims(im_data, 0)
+    batch_images = np.expand_dims(im_data, 0)
 
     # several scales as a batch
     batch_var = torch.from_numpy(batch_images).cuda().float()
@@ -262,22 +263,24 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
         file_name = img['file_name']
         file_path = os.path.join(image_dir, file_name)
 
-        oriImg = cv2.imread(file_path)
+        oriImg = cv2.imread(file_path)          # read image stored at local location
         # Get the shortest side of the image (either height or width)
         shape_dst = np.min(oriImg.shape[0:2])
 
         # Get results of original image
-        paf, heatmap, scale_img = get_outputs(oriImg, model,  preprocess)
+        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess)
 
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
                 
         out = draw_humans(oriImg, humans)
-            
+
+        if not os.path.exists(vis_dir):
+            os.makedirs(vis_dir)
         vis_path = os.path.join(vis_dir, file_name)
         cv2.imwrite(vis_path, out)
         # subset indicated how many peoples foun in this image.
         upsample_keypoints = (heatmap.shape[0]*cfg.MODEL.DOWNSAMPLE/scale_img, heatmap.shape[1]*cfg.MODEL.DOWNSAMPLE/scale_img)
         append_result(img_ids[i], humans, upsample_keypoints, outputs)
 
-    # Eval and show the final result!
+    # Eval and show the final result! (on the coco val set)
     return eval_coco(outputs=outputs, annFile=anno_file, imgIds=img_ids)

@@ -120,6 +120,28 @@ def collate_images_targets_meta(batch):
     return images, targets1, targets2
 
 
+def get_soybean_dataset(data_dir):
+    # get all img paths and anns paths
+    imgs, anns = [], []
+    for root, dir, files in os.walk(data_dir):
+        print('root:', root)
+        print('dir:', dir)
+        i = 0
+        while i < len(files):
+            if i + 1 == len(files):
+                i += 1
+                continue
+            name_img, ext_img = os.path.splitext(files[i])
+            name_ann, ext_ann = os.path.splitext(files[i + 1])
+
+            if ext_img == '.jpg' and ext_ann == '.json' and name_img == name_ann:
+                imgs.append(os.path.join(root, files[i]))
+                anns.append(os.path.join(root, files[i + 1]))
+            i += 2
+
+    return imgs, anns
+
+
 class CocoKeypoints(torch.utils.data.Dataset):
     """`MS Coco Detection <http://mscoco.org/dataset/#detections-challenge2016>`_ Dataset.
 
@@ -363,22 +385,7 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         self.log = logging.getLogger(self.__class__.__name__)
 
         # get all img paths and anns paths
-        for root, dir, files in os.walk(self.root):
-            print('root:', root)
-            print('dir:', dir)
-            i = 0
-            while i < len(files):
-                if i + 1 == len(files):
-                    i += 1
-                    continue
-                name_img, ext_img = os.path.splitext(files[i])
-                name_ann, ext_ann = os.path.splitext(files[i + 1])
-
-                if ext_img == '.jpg' and ext_ann == '.json' and name_img == name_ann:
-                    self.imgs.append(os.path.join(root, files[i]))
-                    self.anns.append(os.path.join(root, files[i + 1]))
-                i += 2
-
+        self.imgs, self.anns = get_soybean_dataset(self.root)
         print('total images:', len(self.imgs))
         print('total annotations:', len(self.anns))
 
@@ -415,7 +422,7 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
 
         keypoints = []
-        for ann in anns:
+        for ann in anns['annotations']:
             single_keypoints = ann['keypoints']
             if len(single_keypoints) < 5:
                 single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))

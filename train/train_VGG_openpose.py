@@ -25,7 +25,7 @@ if NOW_WHAT == 'coco':
     ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
     IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
     IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
-    BATCH_SIZE = 5
+    BATCH_SIZE = 72
 
 elif NOW_WHAT == 'bean':
     # For soybean dataset training
@@ -166,41 +166,39 @@ def cli():
 
 def build_names():
     names = []
-
     for j in range(1, 7):
-        for k in range(1, 3):
-            names.append('loss_stage%d_L%d' % (j, k))
+        names.append('loss_stage%d' % j)       # 4 + 2 = 6 stages in total
     return names
 
 
 def get_loss(saved_for_loss, heat_temp, vec_temp):
-    names = build_names()   # FIXME
+    # print("heat_temp", heat_temp.shape)    # torch.Size([batch_size, 19, 46, 46])
+    # print("vec_temp", vec_temp.shape)      # torch.Size([batch_size, 38, 46, 46])
+    names = build_names()
     saved_for_log = OrderedDict()
     criterion = nn.MSELoss(reduction='mean').cuda()
     total_loss = 0
+    paf_preds, cm_preds = saved_for_loss[0], saved_for_loss[1]
 
-    for j in range(6):
-        pred1 = saved_for_loss[0][j]
-        pred2 = saved_for_loss[1][j]
+    for i in range(4):
+        pred = paf_preds[i]
 
         # Compute losses
-        loss1 = criterion(pred1, vec_temp)
-        loss2 = criterion(pred2, heat_temp)
-
-        total_loss += loss1
-        total_loss += loss2
-        # print(total_loss)
+        loss = criterion(pred, vec_temp)
+        total_loss += loss
 
         # Get value from Variable and save for log
-        saved_for_log[names[2 * j]] = loss1.item()
-        saved_for_log[names[2 * j + 1]] = loss2.item()
+        saved_for_log[names[i]] = loss.item()
 
-    saved_for_log['max_ht'] = torch.max(
-        saved_for_loss[-1].data[:, 0:-1, :, :]).item()
-    saved_for_log['min_ht'] = torch.min(
-        saved_for_loss[-1].data[:, 0:-1, :, :]).item()
-    saved_for_log['max_paf'] = torch.max(saved_for_loss[-2].data).item()
-    saved_for_log['min_paf'] = torch.min(saved_for_loss[-2].data).item()
+    for i in range(2):
+        pred = cm_preds[i]
+
+        # Compute losses
+        loss = criterion(pred, heat_temp)
+        total_loss += loss
+
+        # Get value from Variable and save for log
+        saved_for_log[names[i+4]] = loss.item()
 
     return total_loss, saved_for_log
 
@@ -213,10 +211,10 @@ def train(train_loader, model, optimizer, epoch):
     meter_dict = {}
     for name in build_names():
         meter_dict[name] = AverageMeter()
-    meter_dict['max_ht'] = AverageMeter()
-    meter_dict['min_ht'] = AverageMeter()
-    meter_dict['max_paf'] = AverageMeter()
-    meter_dict['min_paf'] = AverageMeter()
+    # meter_dict['max_ht'] = AverageMeter()
+    # meter_dict['min_ht'] = AverageMeter()
+    # meter_dict['max_paf'] = AverageMeter()
+    # meter_dict['min_paf'] = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -265,10 +263,10 @@ def validate(val_loader, model, epoch):
     meter_dict = {}
     for name in build_names():
         meter_dict[name] = AverageMeter()
-    meter_dict['max_ht'] = AverageMeter()
-    meter_dict['min_ht'] = AverageMeter()
-    meter_dict['max_paf'] = AverageMeter()
-    meter_dict['min_paf'] = AverageMeter()
+    # meter_dict['max_ht'] = AverageMeter()
+    # meter_dict['min_ht'] = AverageMeter()
+    # meter_dict['max_paf'] = AverageMeter()
+    # meter_dict['min_paf'] = AverageMeter()
     # switch to train mode
     model.eval()
 

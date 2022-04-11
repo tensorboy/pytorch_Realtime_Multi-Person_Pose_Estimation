@@ -1,6 +1,8 @@
 import cv2
 from enum import Enum
 
+import numpy as np
+
 
 class CocoPart(Enum):
     Nose = 0
@@ -23,6 +25,13 @@ class CocoPart(Enum):
     LEar = 17
     Background = 18
 
+class SoybeanPart(Enum):
+    FirstBean = 0
+    SecondBean = 1
+    ThirdBean = 2
+    FourthBean = 3
+    FifthBean = 4
+    Background = 5
 
 class Human:
     """
@@ -224,6 +233,17 @@ class Human:
     def __repr__(self):
         return self.__str__()
 
+
+class Pod(Human):
+    """
+    body_parts: list of Pods
+    """
+
+    def __init__(self, pairs):
+        super(__class__, self).__init__(pairs)
+
+
+
 def draw_humans(npimg, humans, imgcopy=False):
     if imgcopy:
         npimg = np.copy(npimg)
@@ -243,6 +263,32 @@ def draw_humans(npimg, humans, imgcopy=False):
         # draw line
         for pair_order, pair in enumerate(CocoPairsRender):
             if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
+                continue
+
+            # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
+            cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
+
+    return npimg
+
+def draw_pods(npimg, pods, imgcopy=False):
+    if imgcopy:
+        npimg = np.copy(npimg)
+    image_h, image_w = npimg.shape[:2]
+    centers = {}
+    for pod in pods:
+        # draw point
+        for i in range(SoybeanPart.Background.value):
+            if i not in pod.body_parts.keys():
+                continue
+
+            body_part = pod.body_parts[i]
+            center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
+            centers[i] = center
+            cv2.circle(npimg, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
+
+        # draw line
+        for pair_order, pair in enumerate(CocoPairsRender):
+            if pair[0] not in pod.body_parts.keys() or pair[1] not in pod.body_parts.keys():
                 continue
 
             # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
@@ -272,6 +318,12 @@ class BodyPart:
 
     def __repr__(self):
         return self.__str__()
+
+
+class SoybeanPart(BodyPart):
+    def __init__(self, uidx, part_idx, x, y, score):
+        super(__class__, self).__init__(uidx, part_idx, x, y, score)
+
         
 CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],

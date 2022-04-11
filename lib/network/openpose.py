@@ -111,13 +111,13 @@ class StageBlock(nn.Module):
 
 class OpenPose_Model(nn.Module):
     def __init__(self, l2_stages=4, l1_stages=2,
-                paf_out_channels=14, heat_out_channels=9):
+                paf_out_channels=38, heat_out_channels=19):
         """
         :param feature_extractor:
-        :param l2_stages:
-        :param l1_stages:
-        :param paf_out_channels:
-        :param heat_out_channels:
+        :param l2_stages: number of stages for PAF
+        :param l1_stages: number of stages for CM
+        :param paf_out_channels: originally set to 14 (why?)
+        :param heat_out_channels: originally set to 9 (why?)
         :param stage_input_mode: either 'from_first_stage' (original)
         or 'from_previous_stage' (i.e. take x_out from previous stage as
         input to next stage).
@@ -142,6 +142,7 @@ class OpenPose_Model(nn.Module):
                        innerout_channels=L2_INNEROUT_CHS[i], out_channels=L2_OUT_CHS[i])
             for i in range(len(L2_IN_CHS))
         ])
+
         # L1 Stages
         L1_IN_CHS = [128 + paf_out_channels]
         L1_INNER_CHS = [96]
@@ -176,7 +177,7 @@ class OpenPose_Model(nn.Module):
             heat_ret.append(heat_pred)  # save stage heatmap results
         saved_for_loss.append(paf_ret)
         saved_for_loss.append(heat_ret)
-        # saved_for_loss: [[xx, xx, xx, xx, xx, xx], [xx, xx, xx, xx, xx, xx]]
+        # saved_for_loss: [[xx, xx, xx, xx,], [xx, xx]]
         return [(paf_ret[-2], heat_ret[-2]), (paf_ret[-1], heat_ret[-1])], saved_for_loss
 
     def _initialize_weights_norm(self):

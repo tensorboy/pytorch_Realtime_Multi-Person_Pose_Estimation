@@ -145,7 +145,7 @@ class NormalizeBean(Preprocess):
         for k, v in dic.items():
             v.sort(key=lambda i: i['label'])
 
-        res = []
+        beans = []
         MAX_BEAN_COUNT = len(get_soybean_keypoints())
         for k, v in dic.items():
             if len(v) > MAX_BEAN_COUNT:
@@ -154,8 +154,12 @@ class NormalizeBean(Preprocess):
             bean = {'group_id': k,
                     'keypoints': np.asarray([item['points'][0] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
                     'unknown_count': v[0]['label'] == '0-0'}
-            res.append(bean)
-        return res
+            beans.append(bean)
+        # return beans
+        return {
+            'imagePath': anns['imagePath'],
+            'annotations': beans
+        }
 
     def __call__(self, image, anns, meta):
         anns = self.normalize_annotations(anns)
@@ -285,7 +289,7 @@ class RescaleRelativeBean(Preprocess):
         meta['valid_area'][2:] *= scale_factors
         self.log.debug('meta after: %s', meta)
 
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['valid_area'] = meta['valid_area']
 
         return image, anns, meta
@@ -300,7 +304,7 @@ class RescaleRelativeBean(Preprocess):
         x_scale = image.size[0] / w
         y_scale = image.size[1] / h
 
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['keypoints'][:, 0] = (ann['keypoints'][:, 0] + 0.5) * x_scale - 0.5
             ann['keypoints'][:, 1] = (ann['keypoints'][:, 1] + 0.5) * y_scale - 0.5
 
@@ -431,7 +435,7 @@ class CropBean(Preprocess):
         meta['valid_area'][2:] = np.minimum(meta['valid_area'][2:], ltrb[2:] - ltrb[:2])
         self.log.debug('valid area after crop: %s', meta['valid_area'])
 
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['valid_area'] = meta['valid_area']
 
         return image, anns, meta
@@ -455,7 +459,7 @@ class CropBean(Preprocess):
         image = image.crop(ltrb)
 
         # crop keypoints
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['keypoints'][:, 0] -= x_offset
             ann['keypoints'][:, 1] -= y_offset
 
@@ -527,7 +531,7 @@ class CenterPadBean(Preprocess):
         meta['valid_area'][:2] += ltrb[:2]
         self.log.debug('valid area after pad: %s', meta['valid_area'])
 
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['valid_area'] = meta['valid_area']
 
         return image, anns, meta
@@ -548,7 +552,7 @@ class CenterPadBean(Preprocess):
             image, ltrb, fill=(124, 116, 104))
 
         # pad annotations
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['keypoints'][:, 0] += ltrb[0]
             ann['keypoints'][:, 1] += ltrb[1]
         return image, anns, ltrb
@@ -590,7 +594,7 @@ class HFlipBean(Preprocess):
 
         w, _ = image.size
         image = image.transpose(PIL.Image.FLIP_LEFT_RIGHT)
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['keypoints'][:, 0] = -ann['keypoints'][:, 0] - 1.0 + w
             if self.swap is not None:
                 ann['keypoints'] = self.swap(ann['keypoints'])
@@ -600,7 +604,7 @@ class HFlipBean(Preprocess):
         meta['hflip'] = True
 
         meta['valid_area'][0] = -(meta['valid_area'][0] + meta['valid_area'][2]) + w
-        for ann in anns:
+        for ann in anns['annotations']:
             ann['valid_area'] = meta['valid_area']
 
         return image, anns, meta
