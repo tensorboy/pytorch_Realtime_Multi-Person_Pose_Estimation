@@ -71,7 +71,7 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
                                                              COCOPAIRS_NET[pair_id][1], f2, f3, peak_a, peak_b);
                 float scores = 0.0f;
 
-                // criterion 1 : score treshold count
+                // criterion 1 : score threshold count
                 int criterion1 = 0;
                 for (int i = 0; i < STEP_PAF; i++) {
                     float score = vec.x * paf_vecs[i].x + vec.y * paf_vecs[i].y;

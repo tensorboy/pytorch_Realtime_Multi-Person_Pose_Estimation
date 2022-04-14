@@ -1,6 +1,5 @@
 import cv2
 from enum import Enum
-
 import numpy as np
 
 
@@ -25,13 +24,15 @@ class CocoPart(Enum):
     LEar = 17
     Background = 18
 
-class SoybeanPart(Enum):
+
+class BeanPart(Enum):
     FirstBean = 0
     SecondBean = 1
     ThirdBean = 2
     FourthBean = 3
     FifthBean = 4
     Background = 5
+
 
 class Human:
     """
@@ -243,7 +244,6 @@ class Pod(Human):
         super(__class__, self).__init__(pairs)
 
 
-
 def draw_humans(npimg, humans, imgcopy=False):
     if imgcopy:
         npimg = np.copy(npimg)
@@ -270,14 +270,16 @@ def draw_humans(npimg, humans, imgcopy=False):
 
     return npimg
 
+
 def draw_pods(npimg, pods, imgcopy=False):
     if imgcopy:
         npimg = np.copy(npimg)
     image_h, image_w = npimg.shape[:2]
     centers = {}
+
     for pod in pods:
         # draw point
-        for i in range(SoybeanPart.Background.value):
+        for i in range(BeanPart.Background.value):
             if i not in pod.body_parts.keys():
                 continue
 
@@ -295,7 +297,8 @@ def draw_pods(npimg, pods, imgcopy=False):
             cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
 
     return npimg
-    
+
+
 class BodyPart:
     """
     part_idx : part index(eg. 0 for nose)
@@ -320,20 +323,17 @@ class BodyPart:
         return self.__str__()
 
 
-class SoybeanPart(BodyPart):
+class PodPart(BodyPart):
     def __init__(self, uidx, part_idx, x, y, score):
         super(__class__, self).__init__(uidx, part_idx, x, y, score)
 
-        
+
 CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
-              
+
 CocoPairs = [
     (1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11),
     (11, 12), (12, 13), (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)
-]   # = 19
-CocoPairsRender = CocoPairs[:-2]            
-              
-              
-              
+]  # = 19
+CocoPairsRender = CocoPairs[:-2]

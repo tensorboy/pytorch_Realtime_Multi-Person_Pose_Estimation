@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
 import time
+
+from PIL import Image
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
 
 from scipy.ndimage.morphology import generate_binary_structure
 from lib.pafprocess import pafprocess
 
-from lib.utils.common import Pod, SoybeanPart
+from lib.utils.common import Pod, BeanPart, PodPart
 
 # Heatmap indices to find each limb (joint connection). Eg: limb_type=1 is
 # Neck->LShoulder, so joint_to_limb_heatmap_relationship[1] represents the
@@ -98,10 +100,14 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
     # upsampled. Eg: win_size=1 -> patch is 3x3; win_size=2 -> 5x5
     # (for BICUBIC interpolation to be accurate, win_size needs to be >=2!)
     win_size = 2
-
     for joint in range(config.MODEL.NUM_KEYPOINTS):
         map_orig = heatmaps[:, :, joint]
+        # img = Image.fromarray(map_orig)
+        # img.show()
         peak_coords = find_peaks(config.TEST.THRESH_HEATMAP, map_orig)
+        # print('peak_coords', peak_coords)
+        # print('len(peak_coords):', len(peak_coords))
+        # print('peak_coords:\n', peak_coords)
         peaks = np.zeros((len(peak_coords), 4))
         for i, peak in enumerate(peak_coords):
             if bool_refine_center:
@@ -345,11 +351,14 @@ def group_limbs_of_same_person(connected_limbs, joint_list, config):
 
 def paf_to_pods_cpp(heatmaps, pafs, config):
     pods = []
+    # print('downsample:', config.MODEL.DOWNSAMPLE)
+
     bean_list_per_bean_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)
 
     bean_list = np.array(
         [tuple(peak) + (bean_type,) for bean_type, bean_peaks in enumerate(bean_list_per_bean_type) for peak in
          bean_peaks]).astype(np.float32)
+    print('bean_list.shape:\n', bean_list.shape)
 
     if bean_list.shape[0] > 0:
         bean_list = np.expand_dims(bean_list, 0)
@@ -357,7 +366,11 @@ def paf_to_pods_cpp(heatmaps, pafs, config):
             pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
         heatmap_upsamp = cv2.resize(
             heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
+        # print('heatmap_upsamp:', heatmap_upsamp.shape)
+        # print('paf_upsamp:', paf_upsamp.shape)
+        print("pafprocess")
         pafprocess.process_paf(bean_list, heatmap_upsamp, paf_upsamp)
+        print(pafprocess.get_num_humans())
         for pod_id in range(pafprocess.get_num_humans()):
             pod = Pod([])
             is_added = False
@@ -366,7 +379,7 @@ def paf_to_pods_cpp(heatmaps, pafs, config):
                 if c_idx < 0:
                     continue
                 is_added = True
-                pod.body_parts[part_idx] = SoybeanPart(
+                pod.body_parts[part_idx] = PodPart(
                     '%d-%d' % (pod_id, part_idx), part_idx,
                     float(pafprocess.get_part_x(c_idx)) / heatmap_upsamp.shape[1],
                     float(pafprocess.get_part_y(c_idx)) / heatmap_upsamp.shape[0],

@@ -1,8 +1,20 @@
+from enum import Enum
+
 import numpy as np
 
+aa = np.array([[1, 2, 3], [4, 5, 6]])
+
+a = aa[1, 2]
+print(a)
 
 
-aa = np.array([[1,2,3],[4,5,6]])
+class SoybeanPart(Enum):
+    FirstBean = 0
+    SecondBean = 1
+    ThirdBean = 2
+    FourthBean = 3
+    FifthBean = 4
+    Background = 5
 
-print(np.min(aa.shape[0:2]))
-print(aa.shape[0:2])
+
+print(SoybeanPart.Background.value)

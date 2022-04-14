@@ -29,7 +29,7 @@ if NOW_WHAT == 'coco':
 
 elif NOW_WHAT == 'bean':
     # For soybean dataset training
-    DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean')
+    DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean/images')
     ANNOTATIONS_TRAIN = None
     ANNOTATIONS_VAL = None
     IMAGE_DIR_TRAIN = DATA_DIR
@@ -229,7 +229,6 @@ def train(train_loader, model, optimizer, epoch):
         # compute output
         _, saved_for_loss = model(img)
 
-
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, paf_target)
 
         for name, _ in meter_dict.items():
@@ -373,7 +372,7 @@ def train_coco():
 
     best_val_loss = np.inf
 
-    model_save_filename = f'network/weight/best_openpose.pth'
+    model_save_filename = f'network/weight/best_coco_openpose.pth'
     for epoch in range(5, args.epochs):
 
         # train for one epoch

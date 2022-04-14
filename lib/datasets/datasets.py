@@ -124,8 +124,7 @@ def get_soybean_dataset(data_dir):
     # get all img paths and anns paths
     imgs, anns = [], []
     for root, dir, files in os.walk(data_dir):
-        print('root:', root)
-        print('dir:', dir)
+        files = sorted(files)
         i = 0
         while i < len(files):
             if i + 1 == len(files):
@@ -133,6 +132,7 @@ def get_soybean_dataset(data_dir):
                 continue
             name_img, ext_img = os.path.splitext(files[i])
             name_ann, ext_ann = os.path.splitext(files[i + 1])
+            # print(name_img, name_ann)
 
             if ext_img == '.jpg' and ext_ann == '.json' and name_img == name_ann:
                 imgs.append(os.path.join(root, files[i]))

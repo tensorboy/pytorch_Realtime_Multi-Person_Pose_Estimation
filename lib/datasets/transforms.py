@@ -157,7 +157,7 @@ class NormalizeBean(Preprocess):
             beans.append(bean)
         # return beans
         return {
-            'imagePath': anns['imagePath'],
+            'image_name': anns['imagePath'],
             'annotations': beans
         }
 

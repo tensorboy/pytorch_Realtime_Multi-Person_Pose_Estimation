@@ -1,6 +1,6 @@
 EXPERIMENT_NAME: 'rtpose_lr001'
-DATA_DIR: '/data'
-OUTPUT_DIR: '/data/rtpose'
+DATA_DIR: 'data'
+OUTPUT_DIR: 'data/rtpose'
 GPUS: 
   - 0
   - 1

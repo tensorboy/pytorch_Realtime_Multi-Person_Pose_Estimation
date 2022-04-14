@@ -29,7 +29,7 @@ if NOW_WHAT == 'coco':
 
 elif NOW_WHAT == 'bean':
     # For soybean dataset training
-    DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean')
+    DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean/train')
     ANNOTATIONS_TRAIN = None
     ANNOTATIONS_VAL = None
     IMAGE_DIR_TRAIN = DATA_DIR
@@ -457,6 +457,7 @@ def train_soybean():
         best_val_loss = min(val_loss, best_val_loss)
         if is_best:
             torch.save(model.state_dict(), model_save_filename)
+            print('better model has been saved: ', model_save_filename)
 
 
 if __name__ == '__main__':

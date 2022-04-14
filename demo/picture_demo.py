@@ -74,6 +74,8 @@ with torch.no_grad():
 print("im_scale:", im_scale)
 
 humans = paf_to_pose_cpp(heatmap, paf, cfg)
+humans = paf_to_pose_cpp(heatmap, paf, cfg)
+
 
 out = draw_humans(oriImg, humans)
 cv2.imwrite(img_name.split('.')[0] + '_result.png', out)   

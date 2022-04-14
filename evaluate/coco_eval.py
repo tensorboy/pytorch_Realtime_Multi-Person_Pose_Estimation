@@ -19,21 +19,6 @@ from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRen
 from lib.utils.paf_to_pose import paf_to_pose_cpp
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--cfg', help='experiment configure file name',
-                    default='./experiments/vgg19_368x368_sgd.yaml', type=str)
-parser.add_argument('--weight', type=str,
-                    default='../ckpts/openpose.pth')
-parser.add_argument('opts',
-                    help="Modify config options using the command-line",
-                    default=None,
-                    nargs=argparse.REMAINDER)
-args = parser.parse_args()
-
-# update config file
-update_config(cfg, args)
-
-
 '''
 MS COCO annotation order:
 0: nose	   		1: l eye		2: r eye	3: l ear	4: r ear
@@ -77,7 +62,7 @@ def eval_coco(outputs, annFile, imgIds):
 
 
 
-def get_outputs(img, model, preprocess):
+def get_outputs(img, model, preprocess, new_openpose_model=False):
     """Computes the averaged heatmap and paf for the given image
     :param multiplier:
     :param origImg: numpy array, the image being processed
@@ -109,8 +94,16 @@ def get_outputs(img, model, preprocess):
     batch_var = torch.from_numpy(batch_images).cuda().float()
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
-    heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-    paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+
+    if new_openpose_model:
+        # for new openpose model
+        heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+        paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+
+    else:
+        # for vgg19 rtpose model
+        heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+        paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
 
     return paf, heatmap, im_scale
 
@@ -268,8 +261,10 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
         shape_dst = np.min(oriImg.shape[0:2])
 
         # Get results of original image
-        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess)
-
+        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess, new_openpose_model=True)
+        print('file_name:', file_name)
+        # print('heatmap:', heatmap.shape)  # (xx, xx, 19) with 46 for either height or width
+        # print('paf:', paf.shape)     # (xx, xx, 38) with 46 for either height or width
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
                 
         out = draw_humans(oriImg, humans)
