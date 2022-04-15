@@ -102,6 +102,7 @@ def bean_train_factory(args, preprocess, target_transforms):
         preprocess=preprocess,
         image_transform=transforms.image_transform_train,
         target_transforms=target_transforms,
+        stride=8
     )]
 
     train_loader = torch.utils.data.DataLoader(
@@ -113,7 +114,8 @@ def bean_train_factory(args, preprocess, target_transforms):
         root=args.val_image_dir,
         preprocess=preprocess,
         image_transform=transforms.image_transform_train,
-        target_transforms=target_transforms
+        target_transforms=target_transforms,
+        stride=8
     )
 
     val_loader = torch.utils.data.DataLoader(

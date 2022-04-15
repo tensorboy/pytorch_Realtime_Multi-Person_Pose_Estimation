@@ -357,25 +357,24 @@ def paf_to_pods_cpp(heatmaps, pafs, config):
 
     bean_list = np.array(
         [tuple(peak) + (bean_type,) for bean_type, bean_peaks in enumerate(bean_list_per_bean_type) for peak in
-         bean_peaks]).astype(np.float32)
-    print('bean_list.shape:\n', bean_list.shape)
+         bean_peaks]).astype(np.float32)  # bean_list.shape: (xxx, 5)
+    # 5 stands for [x_pos, y_pos, score, count_joints, joint_id]
 
     if bean_list.shape[0] > 0:
-        bean_list = np.expand_dims(bean_list, 0)
+        bean_list = np.expand_dims(bean_list, 0)  # bean_list.shape: (1, xxx, 5)
         paf_upsamp = cv2.resize(
             pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
         heatmap_upsamp = cv2.resize(
             heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
         # print('heatmap_upsamp:', heatmap_upsamp.shape)
         # print('paf_upsamp:', paf_upsamp.shape)
-        print("pafprocess")
         pafprocess.process_paf(bean_list, heatmap_upsamp, paf_upsamp)
         print(pafprocess.get_num_humans())
         for pod_id in range(pafprocess.get_num_humans()):
             pod = Pod([])
             is_added = False
             for part_idx in range(config.MODEL.NUM_KEYPOINTS):
-                c_idx = int(pafprocess.get_part_cid(pod_id, part_idx))
+                c_idx = int(pafprocess.get_part_cid(pod_id, part_idx))  # get unique idx of the part of the pod
                 if c_idx < 0:
                     continue
                 is_added = True

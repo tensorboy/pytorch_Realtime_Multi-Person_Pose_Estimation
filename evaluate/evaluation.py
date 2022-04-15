@@ -33,7 +33,7 @@ if NOW_WHAT == 'coco':
                         default='./experiments/vgg19_368x368_sgd.yaml', type=str)
 
 elif NOW_WHAT == 'bean':
-    weight_path = 'network/weight/4.13/best_bean.pth'
+    weight_path = 'network/weight/4.15/best_bean.pth'
     image_dir = 'data/bean/val'
     anno_file = None
     vis_dir = 'data/bean/output'

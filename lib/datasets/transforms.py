@@ -148,11 +148,12 @@ class NormalizeBean(Preprocess):
         beans = []
         MAX_BEAN_COUNT = len(get_soybean_keypoints())
         for k, v in dic.items():
+
             if len(v) > MAX_BEAN_COUNT:
                 logging.warning(f"pod with {len(v)} beans!! (group_id: {k})"
                                 f"Please check if there is an error in the annotation file:\n{anns['imagePath']}")
             bean = {'group_id': k,
-                    'keypoints': np.asarray([item['points'][0] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
+                    'keypoints': np.asarray([item['points'][0] + [1] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
                     'unknown_count': v[0]['label'] == '0-0'}
             beans.append(bean)
         # return beans

@@ -71,6 +71,7 @@ def get_outputs(img, model, preprocess):
     elif preprocess == 'ssd':
         im_data = ssd_preprocess(im_croped)
 
+    print('im_data.shape:', im_data.shape)
     batch_images = np.expand_dims(im_data, 0)
 
     # several scales as a batch
@@ -154,7 +155,7 @@ def run_eval(image_dir, vis_dir, model, preprocess):
         print('heatmap:', heatmap.shape)
         pods = paf_to_pods_cpp(heatmap, paf, cfg)
         print('pods:', pods)
-        out = draw_pods(oriImg, pods)  # TODO change this to draw beans
+        out = draw_pods(oriImg, pods)
 
         if not os.path.exists(vis_dir):
             os.makedirs(vis_dir)

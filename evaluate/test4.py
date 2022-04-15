@@ -18,3 +18,11 @@ class SoybeanPart(Enum):
 
 
 print(SoybeanPart.Background.value)
+
+v = [
+    [1, 2],
+     [3, 4],
+     [5, 6]
+     ]
+res = np.asarray(v)
+print(res)

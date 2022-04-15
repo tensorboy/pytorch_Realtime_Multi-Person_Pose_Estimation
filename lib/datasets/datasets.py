@@ -356,6 +356,7 @@ class CocoKeypoints(torch.utils.data.Dataset):
                         count=count, grid_y=grid_y, grid_x=grid_x, stride=self.stride
                     )
 
+
         # background
         heatmaps[:, :, -1] = np.maximum(
             1 - np.max(heatmaps[:, :, :self.HEATMAP_COUNT], axis=2),
@@ -416,7 +417,7 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
     def get_ground_truth(self, anns):
         grid_y = int(self.input_y / self.stride)
         grid_x = int(self.input_x / self.stride)
-        channels_heat = (self.MAX_BEAN_COUNT + 1)           # FIXME Why plus 1?
+        channels_heat = (self.MAX_BEAN_COUNT + 1)           #  plus 1? because of background
         channels_paf = 2 * len(self.BEAN_CONNECTION_IDS)
         heatmaps = np.zeros((int(grid_y), int(grid_x), channels_heat))
         pafs = np.zeros((int(grid_y), int(grid_x), channels_paf))
@@ -425,7 +426,7 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         for ann in anns['annotations']:
             single_keypoints = ann['keypoints']
             if len(single_keypoints) < 5:
-                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))
+                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0, 0]] * (5-len(single_keypoints)))))
             keypoints.append(single_keypoints)
         keypoints = np.array(keypoints)
         keypoints = self.remove_illegal_joint(keypoints)
@@ -434,31 +435,33 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         for i in range(self.MAX_BEAN_COUNT):
             beans = [jo[i] for jo in keypoints]
             for center in beans:
-                gaussian_map = heatmaps[:, :, i]
-                heatmaps[:, :, i] = putGaussianMaps(
-                    center, gaussian_map,
-                    7.0, grid_y, grid_x, self.stride)
+                if center[2] > 0.5:
+                    gaussian_map = heatmaps[:, :, i]
+                    heatmaps[:, :, i] = putGaussianMaps(
+                        center, gaussian_map,
+                        7.0, grid_y, grid_x, self.stride)
 
         # pafs
         for i, (k1, k2) in enumerate(self.BEAN_CONNECTION_IDS):
             # limb
             count = np.zeros((int(grid_y), int(grid_x)), dtype=np.uint32)
             for pod in keypoints:
-                centerA = pod[k1]
-                centerB = pod[k2]
-                vec_map = pafs[:, :, 2 * i:2 * (i + 1)]
+                if pod[k1, 2] > 0.5 and pod[k2, 2] > 0.5:
+                    centerA = pod[k1, :2]
+                    centerB = pod[k2, :2]
 
-                pafs[:, :, 2 * i:2 * (i + 1)], count = putVecMaps(
-                    centerA=centerA,
-                    centerB=centerB,
-                    accumulate_vec_map=vec_map,
-                    count=count, grid_y=grid_y, grid_x=grid_x, stride=self.stride
-                )
+                    vec_map = pafs[:, :, 2 * i:2 * (i + 1)]
+                    pafs[:, :, 2 * i:2 * (i + 1)], count = putVecMaps(
+                        centerA=centerA,
+                        centerB=centerB,
+                        accumulate_vec_map=vec_map,
+                        count=count, grid_y=grid_y, grid_x=grid_x, stride=self.stride
+                    )
         return heatmaps, pafs
 
     def remove_illegal_joint(self, keypoints):
-        # keypoints shape: (x, 5, 2), x is the number of keypoints in the image
-        MAGIC_CONSTANT = (-1, -1)    # replace illegal point location to MAGIC_CONSTANT
+        # keypoints shape: (x, 5, 3), x is the number of keypoints in the image
+        MAGIC_CONSTANT = (-1, -1, 0)    # replace illegal point location to MAGIC_CONSTANT
         mask = np.logical_or.reduce((keypoints[:, :, 0] >= self.input_x,
                                      keypoints[:, :, 0] < 0,
                                      keypoints[:, :, 1] >= self.input_y,

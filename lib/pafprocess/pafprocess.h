@@ -7,9 +7,9 @@
 // for beans
 const float THRESH_HEAT = 0.05;
 const float THRESH_VECTOR_SCORE = 0.0001;  // original: 0.05
-const int THRESH_VECTOR_CNT1 = 0;   // original: 6
-const int THRESH_PART_CNT = 0;  // original: 4
-const float THRESH_HUMAN_SCORE = 0;   // original: 0.3
+const int THRESH_VECTOR_CNT1 = 1;   // original: 6
+const int THRESH_PART_CNT = 1;  // original: 4
+const float THRESH_HUMAN_SCORE = 0.0005;   // original: 0.3
 const int NUM_PART = 5;    // original: 18
 const int STEP_PAF = 10;
 

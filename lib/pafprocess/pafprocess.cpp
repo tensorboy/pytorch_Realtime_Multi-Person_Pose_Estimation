@@ -10,7 +10,7 @@
 using namespace std;
 
 vector <vector<float> > subset;
-vector <Peak> peak_infos_line;
+vector <Peak> peak_infos_line;      // a vector of Peak object
 
 int roundpaf(float v);
 
@@ -19,9 +19,11 @@ get_paf_vectors(float *pafmap, const int &ch_id1, const int &ch_id2, int &f2, in
 
 bool comp_candidate(ConnectionCandidate a, ConnectionCandidate b);
 
+// p1, p2, p3 could be the dimension of peaks, so as h1..h3, f1..f3
 int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, float *heatmap, int f1, int f2, int f3,
                 float *pafmap) {
     vector <Peak> peak_infos[NUM_PART];
+    // store all peaks, classified by part types. Each peak is a struct which contains [x, y, score]
     int peak_cnt = 0;
     for (int img_id = 0; img_id < p1; img_id++){
         for (int peak_index = 0; peak_index < p2; peak_index++) {
@@ -38,35 +40,36 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
     peak_infos_line.clear();
     for (int part_id = 0; part_id < NUM_PART; part_id++) {
         for (int i = 0; i < (int) peak_infos[part_id].size(); i++) {
-            peak_infos_line.push_back(peak_infos[part_id][i]);
+            peak_infos_line.push_back(peak_infos[part_id][i]);      // convert peak_infos to one-dim line vector
         }
     }
 
     // Start to Connect
-    vector <Connection> connection_all[COCOPAIRS_SIZE];
-    for (int pair_id = 0; pair_id < COCOPAIRS_SIZE; pair_id++) {
+    vector <Connection> connection_all[COCOPAIRS_SIZE];     //initialize
+    for (int pair_id = 0; pair_id < COCOPAIRS_SIZE; pair_id++) {    // iterate for each type of possible connection
         vector <ConnectionCandidate> candidates;
-        vector <Peak> &peak_a_list = peak_infos[COCOPAIRS[pair_id][0]];
-        vector <Peak> &peak_b_list = peak_infos[COCOPAIRS[pair_id][1]];
+        vector <Peak> &peak_a_list = peak_infos[COCOPAIRS[pair_id][0]];     // filter peak infos of the source part
+        vector <Peak> &peak_b_list = peak_infos[COCOPAIRS[pair_id][1]];     // filter peak infos of the dest part
 
-        if (peak_a_list.size() == 0 || peak_b_list.size() == 0) {
+        if (peak_a_list.size() == 0 || peak_b_list.size() == 0) {   // if no peak of either part type found, continue
             continue;
         }
 
         for (int peak_a_id = 0; peak_a_id < (int) peak_a_list.size(); peak_a_id++) {
-            Peak &peak_a = peak_a_list[peak_a_id];
+            Peak &peak_a = peak_a_list[peak_a_id];          // peak_a is a specific peak of the source part
             for (int peak_b_id = 0; peak_b_id < (int) peak_b_list.size(); peak_b_id++) {
-                Peak &peak_b = peak_b_list[peak_b_id];
+                Peak &peak_b = peak_b_list[peak_b_id];      // peak_b is a specific peak of the dest part
 
                 // calculate vector(direction)
                 VectorXY vec;
                 vec.x = peak_b.x - peak_a.x;
                 vec.y = peak_b.y - peak_a.y;
-                float norm = (float) sqrt(vec.x * vec.x + vec.y * vec.y);
+                float norm = (float) sqrt(vec.x * vec.x + vec.y * vec.y);       // calculate norm of the vector
                 if (norm < 1e-12) continue;
-                vec.x = vec.x / norm;
+                vec.x = vec.x / norm;       // calculate sin and cos ?
                 vec.y = vec.y / norm;
 
+                // get paf vectors on coords between peak_a and peak_b
                 vector <VectorXY> paf_vecs = get_paf_vectors(pafmap, COCOPAIRS_NET[pair_id][0],
                                                              COCOPAIRS_NET[pair_id][1], f2, f3, peak_a, peak_b);
                 float scores = 0.0f;
