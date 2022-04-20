@@ -3,13 +3,10 @@ import sys, os
 sys.path.append(os.path.abspath("./"))
 import argparse
 from lib.config import update_config, cfg
-
 import torch
 from evaluate import bean_eval, coco_eval
-from collections import OrderedDict
-from lib.network.rtpose_vgg import get_model, use_vgg
-from lib.network.openpose import OpenPose_Model, use_vgg
-from torch import load
+from lib.network.rtpose_vgg import get_model
+
 
 
 NOW_WHAT = 'bean'
@@ -25,7 +22,7 @@ parser.add_argument('opts',
 
 
 if NOW_WHAT == 'coco':
-    weight_path = 'network/weight/4.11/best_openpose.pth'
+    weight_path = 'network/weight/4.8/best_pose.pth'
     image_dir = 'data/coco/images/val2017'
     anno_file = 'data/coco/annotations/person_keypoints_val2017.json'
     vis_dir = 'data/coco/images/vis_val2017'
@@ -33,10 +30,10 @@ if NOW_WHAT == 'coco':
                         default='./experiments/vgg19_368x368_sgd.yaml', type=str)
 
 elif NOW_WHAT == 'bean':
-    weight_path = 'network/weight/4.15/best_bean.pth'
-    image_dir = 'data/bean/val'
+    weight_path = 'network/weight/4.20_2/best_bean.pth'
+    image_dir = 'data/bean_whole/test'
     anno_file = None
-    vis_dir = 'data/bean/output'
+    vis_dir = 'data/bean_whole/output'
     parser.add_argument('--cfg', help='experiment configure file name',
                         default='./experiments/vgg19_368x368_sgd_bean.yaml', type=str)
 

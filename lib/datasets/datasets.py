@@ -7,7 +7,6 @@ import torch.utils.data
 import torchvision
 from PIL import Image
 
-from train.train_VGG19 import DATA_DIR
 from .heatmap import putGaussianMaps
 from .paf import putVecMaps
 from . import transforms, utils

@@ -546,7 +546,7 @@ class CenterPadBean(Preprocess):
             top,
             self.target_size[0] - w - left,
             self.target_size[1] - h - top,
-        )
+        )    # left top right bottom
 
         # pad image
         image = torchvision.transforms.functional.pad(

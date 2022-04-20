@@ -286,15 +286,15 @@ def draw_pods(npimg, pods, imgcopy=False):
             body_part = pod.body_parts[i]
             center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
             centers[i] = center
-            cv2.circle(npimg, center, 3, CocoColors[i], thickness=3, lineType=8, shift=0)
+            cv2.circle(npimg, center, 3, BeanColors[i], thickness=3, lineType=8, shift=0)
 
         # draw line
-        for pair_order, pair in enumerate(CocoPairsRender):
+        for pair_order, pair in enumerate(BeanPairsRender):
             if pair[0] not in pod.body_parts.keys() or pair[1] not in pod.body_parts.keys():
                 continue
 
             # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
-            # cv2.line(npimg, centers[pair[0]], centers[pair[1]], CocoColors[pair_order], 3)
+            # cv2.line(npimg, centers[pair[0]], centers[pair[1]], BeanLineColors[pair_order], 3)
 
     return npimg
 
@@ -332,8 +332,22 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
 
+BeanColors = [
+    [51, 51, 255], [51, 153, 255], [51, 255, 255], [51, 255, 153], [255, 153, 51],
+    [85, 255, 0], [0, 255, 0], [0, 255, 85], [0, 255, 170], [0, 255, 255],
+    [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255], [170, 0, 255],
+    [255, 0, 255], [255, 0, 170], [255, 0, 85], [255, 0, 0]]
+
+BeanLineColors = [[255, 153, 153], [255, 153, 204], [255, 255, 204], [204, 255, 229], [0, 0, 255]]
+
+
 CocoPairs = [
     (1, 2), (1, 5), (2, 3), (3, 4), (5, 6), (6, 7), (1, 8), (8, 9), (9, 10), (1, 11),
     (11, 12), (12, 13), (1, 0), (0, 14), (14, 16), (0, 15), (15, 17), (2, 16), (5, 17)
 ]  # = 19
+
+BeanPairs = [
+    (0, 1), (1, 2), (2, 3), (3, 4)
+]
 CocoPairsRender = CocoPairs[:-2]
+BeanPairsRender = BeanPairs

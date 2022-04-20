@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from matplotlib import pyplot as plt
 
 
 def resize(frame, desired_size):
@@ -125,11 +126,15 @@ def crop_with_factor(im, dest_size=None, factor=32, is_ceil=True):
     im_scale = float(dest_size) / im_size_min
     im = cv2.resize(im, None, fx=im_scale, fy=im_scale)
 
-    h, w, c = im.shape
+    h, w, c = im.shape      # (h, w, 3) with either h,w = dest_size
     new_h = _factor_closest(h, factor=factor, is_ceil=is_ceil)
     new_w = _factor_closest(w, factor=factor, is_ceil=is_ceil)
     im_croped = np.zeros([new_h, new_w, c], dtype=im.dtype)
     im_croped[0:h, 0:w, :] = im
+
+    # fig = plt.figure()
+    # plt.imshow(im_croped)
+    # plt.show()
 
     return im_croped, im_scale, im.shape
     

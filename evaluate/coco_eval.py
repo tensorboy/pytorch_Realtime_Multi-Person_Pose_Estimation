@@ -261,7 +261,7 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
         shape_dst = np.min(oriImg.shape[0:2])
 
         # Get results of original image
-        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess, new_openpose_model=True)
+        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess, new_openpose_model=False)
         print('file_name:', file_name)
         # print('heatmap:', heatmap.shape)  # (xx, xx, 19) with 46 for either height or width
         # print('paf:', paf.shape)     # (xx, xx, 38) with 46 for either height or width

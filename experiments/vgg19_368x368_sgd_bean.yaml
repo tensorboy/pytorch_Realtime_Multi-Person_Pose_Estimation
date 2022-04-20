@@ -1,6 +1,6 @@
 EXPERIMENT_NAME: 'rtpose_lr001'
-DATA_DIR: '/data'
-OUTPUT_DIR: '/data/rtpose'
+DATA_DIR: 'data'
+OUTPUT_DIR: 'data/bean/output'
 GPUS: 
   - 0
   - 1
@@ -16,7 +16,7 @@ CUDNN:
   
 DATASET:
   COLOR_RGB: false
-  DATASET: 'coco'
+  DATASET: 'bean'
   TEST_SET: 'val2017'
   TRAIN_SET: 'train2017'
   FLIP: true
@@ -24,11 +24,11 @@ DATASET:
   SCALE_MIN: 0.5
   SCALE_MAX: 1.1               
   IMAGE_SIZE: 368  
-  TRAIN_IMAGE_DIR: 'images/train2017'
-  TRAIN_ANNOTATIONS: ['annotations/person_keypoints_train2017.json']
-  VAL_IMAGE_DIR: 'images/val2017'
-  VAL_ANNOTATIONS: 'annotations/person_keypoints_val2017.json' 
-  
+  TRAIN_IMAGE_DIR: 'train'
+  TRAIN_ANNOTATIONS: []
+  VAL_IMAGE_DIR: 'val'
+  VAL_ANNOTATIONS: 'none'
+
 MODEL:
   NAME: 'pose_resnet'
   PRETRAINED: 'models/pytorch/imagenet/resnet101-5d3b4d8f.pth'
@@ -54,9 +54,9 @@ PRE_TRAIN :
 TRAIN:
   BATCH_SIZE_PER_GPU: 18
   SHUFFLE: true
-  EPOCHS: 300
+  EPOCHS: 75
   OPTIMIZER: 'sgd'
-  LR: 0.01
+  LR: 1.
   LR_FACTOR: 0.1
   LR_STEP:
   - 90
@@ -66,11 +66,12 @@ TRAIN:
   GAMMA2: 0.0
   MOMENTUM: 0.9
   NESTEROV: true
+  PRINT_FREQ: 20
   
 TEST:
   BATCH_SIZE_PER_GPU: 18
   FLIP_TEST: true
-  THRESH_HEATMAP: 0.0002
+  THRESH_HEATMAP: 0.1
   THRESH_PAF: 0.05
   NUM_INTERMED_PTS_BETWEEN_KEYPOINTS: 10  
   BATCH_SIZE_PER_GPU: 8

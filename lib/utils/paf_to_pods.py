@@ -3,6 +3,7 @@ import numpy as np
 import time
 
 from PIL import Image
+from matplotlib import pyplot as plt
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
 
 from scipy.ndimage.morphology import generate_binary_structure
@@ -33,8 +34,15 @@ def find_peaks(param, img):
     in the image
     """
 
-    peaks_binary = (maximum_filter(img, footprint=generate_binary_structure(
-        2, 1)) == img) * (img > param)
+    peaks_binary = (maximum_filter(img, footprint=generate_binary_structure(2, 1)) == img) * (img > param)
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(121)  # left side
+    ax2 = fig.add_subplot(122)  # right side
+    ax1.imshow(img)
+    ax2.imshow(peaks_binary)
+    plt.show()
+
     # Note reverse ([::-1]): we return [[x y], [x y]...] instead of [[y x], [y
     # x]...]
     return np.array(np.nonzero(peaks_binary)[::-1]).T
@@ -105,6 +113,7 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
         # img = Image.fromarray(map_orig)
         # img.show()
         peak_coords = find_peaks(config.TEST.THRESH_HEATMAP, map_orig)
+        print('len:', peak_coords.shape)
         # print('peak_coords', peak_coords)
         # print('len(peak_coords):', len(peak_coords))
         # print('peak_coords:\n', peak_coords)
