@@ -1,5 +1,6 @@
 import copy
 import json
+import logging
 import os
 import numpy as np
 import torch
@@ -42,8 +43,9 @@ from lib.datasets import transforms
 # print(keypoints[mask])
 # keypoints[mask] = MAGIC_CONSTANT
 # print(keypoints[mask])
+from lib.datasets.datasets import get_soybean_keypoints
 
-path = "D:\zjlab\pytorch_Realtime_Multi-Person_Pose_Estimation\data\\bean\\2055_1\Basler_acA4112-20uc__40059801__20201013_143217765_316.json"
+path = "D:\zjlab\pytorch_Realtime_Multi-Person_Pose_Estimation\data\\bean_whole\\train\\Basler_acA4112-20uc__40059801__20201013_143217765_316.json"
 f = open(path)
 anns = json.load(f)
 del anns['imageData']
@@ -60,25 +62,21 @@ for sh in shapes:
 for k, v in dic.items():
     v.sort(key=lambda i: i['label'])
 
-res = []
+beans = []
+MAX_BEAN_COUNT = len(get_soybean_keypoints())
 for k, v in dic.items():
+
+    if len(v) > MAX_BEAN_COUNT:
+        logging.warning(f"pod with {len(v)} beans!! (group_id: {k})"
+                        f"Please check if there is an error in the annotation file:\n{anns['imagePath']}")
     bean = {'group_id': k,
-            'keypoints': np.asarray([item['points'][0] for item in v], dtype=np.float32),
+            'keypoints': np.asarray([item['points'][0] + [1] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
             'unknown_count': v[0]['label'] == '0-0'}
-    res.append(bean)
-anns = {
-        'imagePath': anns['imagePath'],
-        'annotations': res
+    beans.append(bean)
+# return beans
+result = {
+    'image_name': anns['imagePath'],
+    'annotations': beans
 }
-print(anns)
 
-keypoints = []
-for ann in anns['annotations']:
-    single_keypoints = ann['keypoints']
-    if len(single_keypoints) < 5:
-        single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0]] * (5-len(single_keypoints)))))
-    keypoints.append(single_keypoints)
-keypoints = np.array(keypoints)
-
-
-print(anns)
+print(result)

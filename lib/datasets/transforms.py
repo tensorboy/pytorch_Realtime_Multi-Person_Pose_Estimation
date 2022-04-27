@@ -155,6 +155,9 @@ class NormalizeBean(Preprocess):
             bean = {'group_id': k,
                     'keypoints': np.asarray([item['points'][0] + [1] for item in v[:MAX_BEAN_COUNT]], dtype=np.float32),
                     'unknown_count': v[0]['label'] == '0-0'}
+            if len(bean['keypoints']) < 5:
+                bean['keypoints'] = np.concatenate((bean['keypoints'], np.array([[0, 0, 0]] * (5-len(bean['keypoints'])))))
+            # print('bean:', bean)
             beans.append(bean)
         # return beans
         return {
@@ -585,8 +588,9 @@ class HFlip(Preprocess):
 
         return image, anns, meta
 
+
 class HFlipBean(Preprocess):
-    def __init__(self, *, swap=horizontal_swap_coco):
+    def __init__(self, *, swap=None):   # No need to swap annotation order
         self.swap = swap
 
     def __call__(self, image, anns, meta):

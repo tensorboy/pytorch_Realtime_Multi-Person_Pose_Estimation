@@ -17,8 +17,6 @@ CUDNN:
 DATASET:
   COLOR_RGB: false
   DATASET: 'bean'
-  TEST_SET: 'val2017'
-  TRAIN_SET: 'train2017'
   FLIP: true
   ROT_FACTOR: 40
   SCALE_MIN: 0.5
@@ -28,10 +26,12 @@ DATASET:
   TRAIN_ANNOTATIONS: []
   VAL_IMAGE_DIR: 'val'
   VAL_ANNOTATIONS: 'none'
+  TEST_IMAGE_DIR: 'tt'
 
 MODEL:
   NAME: 'pose_resnet'
   PRETRAINED: 'models/pytorch/imagenet/resnet101-5d3b4d8f.pth'
+  TRAINED: 'network/weight/4.20/best_bean.pth'
   HEATMAP_SIZE:
   - 46
   - 46
@@ -52,7 +52,7 @@ PRE_TRAIN :
   FREEZE_BASE_EPOCHS: 5
        
 TRAIN:
-  BATCH_SIZE_PER_GPU: 18
+  BATCH_SIZE_PER_GPU: 3
   SHUFFLE: true
   EPOCHS: 75
   OPTIMIZER: 'sgd'
@@ -71,8 +71,7 @@ TRAIN:
 TEST:
   BATCH_SIZE_PER_GPU: 18
   FLIP_TEST: true
-  THRESH_HEATMAP: 0.1
+  THRESH_HEATMAP: 0.1  # original: 0.1
   THRESH_PAF: 0.05
-  NUM_INTERMED_PTS_BETWEEN_KEYPOINTS: 10  
-  BATCH_SIZE_PER_GPU: 8
-  FLIP_TEST: true  
+  NUM_INTERMED_PTS_BETWEEN_KEYPOINTS: 10
+

@@ -31,15 +31,6 @@ if NOW_WHAT == 'coco':
     IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
     BATCH_SIZE = 5
 
-# elif NOW_WHAT == 'bean':
-#     # For soybean dataset training
-#     DATA_DIR = os.path.join(SOURCE_DIR, 'data/bean_whole')
-#     ANNOTATIONS_TRAIN = None
-#     ANNOTATIONS_VAL = None
-#     IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'train')
-#     IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'val')
-#     BATCH_SIZE = 5
-
 
 def train_factory(args, preprocess, target_transforms):
     train_datas = [datasets.CocoKeypoints(
@@ -93,7 +84,7 @@ def bean_train_factory(cfg, preprocess, target_transforms):
     print('train length:', len(train_loader.dataset))
 
     val_data = datasets.SoybeanKeypoints(
-        root=cfg.DATASET.VAL_IMAGE_DIR,
+        root=os.path.join(SOURCE_DIR, cfg.DATASET.VAL_IMAGE_DIR),
         preprocess=preprocess,
         image_transform=transforms.image_transform_train,
         target_transforms=target_transforms,
@@ -109,22 +100,18 @@ def bean_train_factory(cfg, preprocess, target_transforms):
     return train_loader, val_loader, train_data, val_data
 
 
-def cli(NOW_WHAT):
+def cli(now_what):
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    if NOW_WHAT == 'coco':
+    if now_what == 'coco':
         parser.add_argument('--cfg', help='experiment configure file name',
                             default='./experiments/vgg19_368x368_sgd.yaml', type=str)
-    elif NOW_WHAT == 'bean':
+    elif now_what == 'bean':
         parser.add_argument('--cfg', help='experiment configure file name',
                             default='./experiments/vgg19_368x368_sgd_bean.yaml', type=str)
 
-    parser.add_argument('opts',
-                        help="Modify config options using the command-line",
-                        default=None,
-                        nargs=argparse.REMAINDER)
     args = parser.parse_args()
     # update config file
     update_config(cfg, args)
@@ -373,7 +360,7 @@ def train_coco():
 
 def train_soybean():
     print("Loading dataset...")
-    preprocess = transforms.Compose([  # TODO: adapt preprocess to new json format
+    preprocess = transforms.Compose([
         transforms.NormalizeBean(),
         transforms.RescaleRelativeBean(),
         transforms.CropBean(cfg.DATASET.IMAGE_SIZE),  # 368

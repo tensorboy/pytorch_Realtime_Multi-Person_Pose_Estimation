@@ -13,7 +13,6 @@ vector <vector<float> > subset;
 vector <Peak> peak_infos_line;      // a vector of Peak object
 
 int roundpaf(float v);
-
 vector <VectorXY>
 get_paf_vectors(float *pafmap, const int &ch_id1, const int &ch_id2, int &f2, int &f3, Peak &peak1, Peak &peak2);
 
@@ -28,7 +27,7 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
     for (int img_id = 0; img_id < p1; img_id++){
         for (int peak_index = 0; peak_index < p2; peak_index++) {
             Peak info;
-            info.id = peak_cnt++;
+            info.id = peak_cnt++;       // assign global peak id
             info.x = PEAKS(img_id, peak_index, 0);
             info.y = PEAKS(img_id, peak_index, 1);
             info.score = PEAKS(img_id, peak_index, 2);
@@ -65,7 +64,7 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
                 vec.x = peak_b.x - peak_a.x;
                 vec.y = peak_b.y - peak_a.y;
                 float norm = (float) sqrt(vec.x * vec.x + vec.y * vec.y);       // calculate norm of the vector
-                if (norm < 1e-12) continue;
+                if (norm < 1e-12 || norm > BEAN_INTER_DIST) continue;         // TODO here add distance check ?
                 vec.x = vec.x / norm;       // calculate sin and cos ?
                 vec.y = vec.y / norm;
 
@@ -118,10 +117,10 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
             if (assigned) continue;
 
             Connection conn;
-            conn.peak_id1 = candidate.idx1;                 // peak id (in same part)
+            conn.peak_id1 = candidate.idx1;                     // peak id (among the same part type)
             conn.peak_id2 = candidate.idx2;
             conn.score = candidate.score;
-            conn.cid1 = peak_a_list[candidate.idx1].id;     // peak id (as a whole)
+            conn.cid1 = peak_a_list[candidate.idx1].id;         // peak id (as a whole)
             conn.cid2 = peak_b_list[candidate.idx2].id;
             conns.push_back(conn);
         }
@@ -130,14 +129,14 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
     // Generate subset
     subset.clear();
     for (int pair_id = 0; pair_id < COCOPAIRS_SIZE; pair_id++) {
-        vector <Connection> &conns = connection_all[pair_id];       // get all connections of related to a limb type
+        vector <Connection> &conns = connection_all[pair_id];       // get sorted connections related to a limb type from all connections.
         int part_id1 = COCOPAIRS[pair_id][0];
         int part_id2 = COCOPAIRS[pair_id][1];
 
         for (int conn_id = 0; conn_id < (int) conns.size(); conn_id++) {
             int found = 0;
             int subset_idx1 = 0, subset_idx2 = 0;
-            for (int subset_id = 0; subset_id < (int) subset.size(); subset_id++) {
+            for (int subset_id = 0; subset_id < (int) subset.size(); subset_id++) {      // check established connections to see whether part has been assigned
                 if (subset[subset_id][part_id1] == conns[conn_id].cid1 ||
                     subset[subset_id][part_id2] == conns[conn_id].cid2) {
                     if (found == 0) subset_idx1 = subset_id;
@@ -181,7 +180,7 @@ int process_paf(int p1, int p2, int p3, float *peaks, int h1, int h2, int h3, fl
                 row[19] = 2;
                 row[18] = peak_infos_line[conns[conn_id].cid1].score +
                          peak_infos_line[conns[conn_id].cid2].score +
-                         conns[conn_id].score;
+                         conns[conn_id].score;   // assign a combination of scores to this connection
                 subset.push_back(row);
             }
         }

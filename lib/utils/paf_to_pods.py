@@ -36,12 +36,12 @@ def find_peaks(param, img):
 
     peaks_binary = (maximum_filter(img, footprint=generate_binary_structure(2, 1)) == img) * (img > param)
 
-    fig = plt.figure()
-    ax1 = fig.add_subplot(121)  # left side
-    ax2 = fig.add_subplot(122)  # right side
-    ax1.imshow(img)
-    ax2.imshow(peaks_binary)
-    plt.show()
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(121)  # left side
+    # ax2 = fig.add_subplot(122)  # right side
+    # ax1.imshow(img)
+    # ax2.imshow(peaks_binary)
+    # plt.show()
 
     # Note reverse ([::-1]): we return [[x y], [x y]...] instead of [[y x], [y
     # x]...]
@@ -156,6 +156,7 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
                               peak_score, cnt_total_joints)
             cnt_total_joints += 1
         joint_list_per_joint_type.append(peaks)
+
 
     return joint_list_per_joint_type
 
@@ -368,17 +369,17 @@ def paf_to_pods_cpp(heatmaps, pafs, config):
         [tuple(peak) + (bean_type,) for bean_type, bean_peaks in enumerate(bean_list_per_bean_type) for peak in
          bean_peaks]).astype(np.float32)  # bean_list.shape: (xxx, 5)
     # 5 stands for [x_pos, y_pos, score, count_joints, joint_id]
-
+    print(f'total: {len(bean_list)} beans')
     if bean_list.shape[0] > 0:
         bean_list = np.expand_dims(bean_list, 0)  # bean_list.shape: (1, xxx, 5)
         paf_upsamp = cv2.resize(
             pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
         heatmap_upsamp = cv2.resize(
             heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
-        # print('heatmap_upsamp:', heatmap_upsamp.shape)
-        # print('paf_upsamp:', paf_upsamp.shape)
+        # print('heatmap_upsamp:', heatmap_upsamp.shape)      # (368, xxx, 6)
+        # print('paf_upsamp:', paf_upsamp.shape)              # (368, xxx, 8)
         pafprocess.process_paf(bean_list, heatmap_upsamp, paf_upsamp)
-        print(pafprocess.get_num_humans())
+        print(f'total pods:{pafprocess.get_num_humans()}')
         for pod_id in range(pafprocess.get_num_humans()):
             pod = Pod([])
             is_added = False

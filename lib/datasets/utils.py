@@ -55,3 +55,4 @@ def mask_valid_area(intensities, valid_area):
     if max_j < intensities.shape[2]:
         intensities[:, :, max_j:] = 0
 
+

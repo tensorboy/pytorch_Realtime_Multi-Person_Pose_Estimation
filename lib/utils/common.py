@@ -294,7 +294,7 @@ def draw_pods(npimg, pods, imgcopy=False):
                 continue
 
             # npimg = cv2.line(npimg, centers[pair[0]], centers[pair[1]], common.CocoColors[pair_order], 3)
-            # cv2.line(npimg, centers[pair[0]], centers[pair[1]], BeanLineColors[pair_order], 3)
+            cv2.line(npimg, centers[pair[0]], centers[pair[1]], BeanLineColors[pair_order], 3)
 
     return npimg
 

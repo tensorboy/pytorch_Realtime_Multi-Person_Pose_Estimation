@@ -393,7 +393,6 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
         ann_path = self.anns[index]
         anns = self.loadAnns(ann_path)  # load annotation of one image
         anns = copy.deepcopy(anns)
-
         with open(os.path.join(self.root, self.imgs[index]), 'rb') as f:
             image = Image.open(f).convert('RGB')
 
@@ -423,10 +422,8 @@ class SoybeanKeypoints(torch.utils.data.Dataset):
 
         keypoints = []
         for ann in anns['annotations']:
-            single_keypoints = ann['keypoints']
-            if len(single_keypoints) < 5:
-                single_keypoints = np.concatenate((single_keypoints, np.array([[0, 0, 0]] * (5-len(single_keypoints)))))
-            keypoints.append(single_keypoints)
+            keypoints.append(ann['keypoints'])
+
         keypoints = np.array(keypoints)
         keypoints = self.remove_illegal_joint(keypoints)
 

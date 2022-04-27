@@ -127,6 +127,7 @@ class OpenPose_Model(nn.Module):
         # Backbone - feature extractor
         self.feature_extractor = make_vgg19_block()
 
+
         # L2 Stages
         L2_IN_CHS = [128]
         L2_INNER_CHS = [96]

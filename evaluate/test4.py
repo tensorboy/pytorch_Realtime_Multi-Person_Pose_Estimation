@@ -1,25 +1,18 @@
 import random
+from collections import defaultdict
 
 import numpy as np
+from pycocotools.coco import COCO
 from scipy import ndimage, misc
 import matplotlib.pyplot as plt
 from scipy.ndimage import generate_binary_structure
 
-# fig = plt.figure()
+annFile = 'D:\zjlab\pytorch_Realtime_Multi-Person_Pose_Estimation\data\coco\\annotations\person_keypoints_val2017.json'
+cocoGt = COCO(annFile)
+catIds = cocoGt.getCatIds()
+print('catIds:', catIds)
+imgIds = sorted(cocoGt.getImgIds())
+gts = cocoGt.loadAnns(cocoGt.getAnnIds(imgIds=imgIds, catIds=catIds))
 
-# plt.gray()  # show the filtered result in grayscale
-# ax1 = fig.add_subplot(121)  # left side
-# ax2 = fig.add_subplot(122)  # right side
-# ascent = misc.ascent()
-# result = ndimage.maximum_filter(ascent, footprint=generate_binary_structure(2, 1)) * (ascent > 200)
-# peaks_binary = (ndimage.maximum_filter(ascent, footprint=generate_binary_structure(2, 1)) == ascent) * (ascent > 200)
-#
-# print(peaks_binary)
-# res = np.array(np.nonzero(peaks_binary)[::-1]).T
-# print(res)
-# print(len(res))
-# ax1.imshow(ascent)
-# ax2.imshow(peaks_binary)
-# plt.show()
 
-print(random.random())
+print(gts[0])

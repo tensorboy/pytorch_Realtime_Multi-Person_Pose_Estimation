@@ -3944,6 +3944,20 @@ SWIGINTERN PyObject *Swig_var_COCOPAIRS_SIZE_get(void) {
 }
 
 
+SWIGINTERN int Swig_var_BEAN_INTER_DIST_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable BEAN_INTER_DIST is read-only.");
+  return 1;
+}
+
+
+SWIGINTERN PyObject *Swig_var_BEAN_INTER_DIST_get(void) {
+  PyObject *pyobj = 0;
+  
+  pyobj = SWIG_From_float(static_cast< float >(BEAN_INTER_DIST));
+  return pyobj;
+}
+
+
 SWIGINTERN int Swig_var_COCOPAIRS_NET_set(PyObject *) {
   SWIG_Error(SWIG_AttributeError,"Variable COCOPAIRS_NET is read-only.");
   return 1;
@@ -5946,6 +5960,7 @@ SWIG_init(void) {
   SWIG_addvarlink(SWIG_globals(),(char *)"NUM_PART",Swig_var_NUM_PART_get, Swig_var_NUM_PART_set);
   SWIG_addvarlink(SWIG_globals(),(char *)"STEP_PAF",Swig_var_STEP_PAF_get, Swig_var_STEP_PAF_set);
   SWIG_addvarlink(SWIG_globals(),(char *)"COCOPAIRS_SIZE",Swig_var_COCOPAIRS_SIZE_get, Swig_var_COCOPAIRS_SIZE_set);
+  SWIG_addvarlink(SWIG_globals(),(char *)"BEAN_INTER_DIST",Swig_var_BEAN_INTER_DIST_get, Swig_var_BEAN_INTER_DIST_set);
   SWIG_addvarlink(SWIG_globals(),(char *)"COCOPAIRS_NET",Swig_var_COCOPAIRS_NET_get, Swig_var_COCOPAIRS_NET_set);
   SWIG_addvarlink(SWIG_globals(),(char *)"COCOPAIRS",Swig_var_COCOPAIRS_get, Swig_var_COCOPAIRS_set);
 #if PY_VERSION_HEX >= 0x03000000

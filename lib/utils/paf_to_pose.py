@@ -40,12 +40,12 @@ def find_peaks(param, img):
         2, 1)) == img) * (img > param)
     # Note reverse ([::-1]): we return [[x y], [x y]...] instead of [[y x], [y
     # x]...]
-    fig = plt.figure()
-    ax1 = fig.add_subplot(121)  # left side
-    ax2 = fig.add_subplot(122)  # right side
-    ax1.imshow(img)
-    ax2.imshow(peaks_binary)
-    plt.show()
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(121)  # left side
+    # ax2 = fig.add_subplot(122)  # right side
+    # ax1.imshow(img)
+    # ax2.imshow(peaks_binary)
+    # plt.show()
     return np.array(np.nonzero(peaks_binary)[::-1]).T
 
 

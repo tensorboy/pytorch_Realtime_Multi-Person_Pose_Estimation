@@ -1,16 +1,13 @@
+import copy
 import os
+import sys
 import time
 
 import cv2
 import numpy as np
-import argparse
 import json
-import pandas as pd
-from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
-
 import torch
-
+from evaluate.beaneval import BEANeval
 from lib.datasets import transforms
 from lib.datasets.datasets import get_soybean_dataset
 from lib.datasets.preprocessing import (inception_preprocess,
@@ -20,31 +17,55 @@ from lib.network import im_transform
 from lib.config import cfg, update_config
 from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRender, draw_humans, draw_pods
 from lib.utils.paf_to_pods import paf_to_pods_cpp
-from lib.utils.paf_to_pose import paf_to_pose_cpp
 
+PYTHON_VERSION = sys.version_info[0]
+if PYTHON_VERSION == 2:
+    from urllib import urlretrieve
+elif PYTHON_VERSION == 3:
+    from urllib.request import urlretrieve
 
-def eval_coco(outputs, annFile, imgIds):
-    """Evaluate images on Coco test set
+def eval_bean(outputs, ann_paths):
+    """Evaluate images on Soybean test set
     :param outputs: list of dictionaries, the models' processed outputs
-    :param dataDir: string, path to the MSCOCO data directory
-    :param imgIds: list, all the image ids in the validation set
+    :param ann_paths: list, all the annotation paths in the validation set
     :returns : float, the mAP score
     """
     with open('results.json', 'w') as f:
         json.dump(outputs, f)
-    cocoGt = COCO(annFile)  # load annotations
-    cocoDt = cocoGt.loadRes('results.json')  # load model outputs
+    beanGt = ann_paths  # load annotations
+    beanDt = loadRes('results.json')  # load model outputs
 
     # running evaluation
-    cocoEval = COCOeval(cocoGt, cocoDt, 'keypoints')
-    cocoEval.params.imgIds = imgIds
-    cocoEval.evaluate()
-    cocoEval.accumulate()
-    cocoEval.summarize()
-    os.remove('results.json')
+    beanEval = BEANeval(beanGt, beanDt)
+    beanEval.evaluate()
+    beanEval.accumulate()
+    beanEval.summarize()
+    # os.remove('results.json')
     # return Average Precision
-    return cocoEval.stats[0]
+    return beanEval.stats[0]
 
+
+def add_bbox_info(anns):
+    print('Loading and preparing results...')
+    tic = time.time()
+    anns = copy.deepcopy(anns)
+    for id, ann in enumerate(anns):
+        s = ann['keypoints']
+        x = s[0::2]
+        y = s[1::2]
+        x0, x1, y0, y1 = np.min(x), np.max(x), np.min(y), np.max(y)
+        ann['area'] = (x1-x0)*(y1-y0)
+        ann['bbox'] = [x0, y0, x1-x0, y1-y0]
+    print('DONE (t={:0.2f}s)'.format(time.time() - tic))
+    return anns
+
+
+def loadRes(resFile):
+    with open(resFile) as f:
+        anns = json.load(f)
+    assert type(anns) == list, 'results in not an array of objects'
+    anns = add_bbox_info(anns)
+    return anns
 
 def get_outputs(img, model, preprocess):
     """Computes the averaged heatmap and paf for the given image
@@ -78,8 +99,13 @@ def get_outputs(img, model, preprocess):
     batch_var = torch.from_numpy(batch_images).cuda().float()
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
+
     paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
     heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+
+    # for new openpose model
+    # paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+    # heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
 
     return paf, heatmap, im_scale
 
@@ -117,8 +143,7 @@ def append_result(image_name, pods, upsample_keypoints, outputs):
                 all_scores.append(score)
 
         one_result["score"] = 1.
-        one_result["keypoints"] = keypoints
-
+        one_result["keypoints"] = list(keypoints.reshape(10))
         outputs.append(one_result)
 
 
@@ -144,7 +169,7 @@ def run_eval(image_dir, vis_dir, model, preprocess):
         anno_file = json.load(f)
         anns = transforms.NormalizeBean().normalize_annotations(anno_file)
         file_name = anns['image_name']
-        print('filename:', file_name)
+        print('file_name:', file_name)
 
         # Get the shortest side of the image (either height or width)
         shape_dst = np.min(oriImg.shape[0:2])
@@ -162,10 +187,14 @@ def run_eval(image_dir, vis_dir, model, preprocess):
 
         vis_path = os.path.join(vis_dir, file_name)
         cv2.imwrite(vis_path, out)
-        # subset indicated how many peoples foun in this image.
+        # subset indicated how many peoples found in this image.
         upsample_keypoints = (
         heatmap.shape[0] * cfg.MODEL.DOWNSAMPLE / scale_img, heatmap.shape[1] * cfg.MODEL.DOWNSAMPLE / scale_img)
         append_result(img_paths[i], pods, upsample_keypoints, outputs)
 
     # Eval and show the final result!
-    # return eval_coco(outputs=outputs, annFile=anno_file, imgIds=img_ids)
+    return eval_bean(outputs=outputs, ann_paths=ann_paths)
+
+
+
+
