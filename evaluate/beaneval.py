@@ -100,12 +100,12 @@ class BEANeval:
             xg = g[0::3]
             yg = g[1::3]
             vg = g[2::3]
-            k1 = np.count_nonzero(vg > 0)
+            k1 = np.count_nonzero(vg > 0)       # the number of visible keypoints
             bb = gt['bbox']
-            x0 = bb[0] - bb[2]
-            x1 = bb[0] + bb[2] * 2
-            y0 = bb[1] - bb[3]
-            y1 = bb[1] + bb[3] * 2
+            x0 = bb[0] - bb[2]          # x - width
+            x1 = bb[0] + bb[2] * 2      # x + 2 * width
+            y0 = bb[1] - bb[3]          # y - height
+            y1 = bb[1] + bb[3] * 2      # y + 2 * height
             for i, dt in enumerate(dts):
                 d = np.array(dt['keypoints'])
                 xd = d[0::3]

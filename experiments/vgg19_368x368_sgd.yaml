@@ -17,8 +17,6 @@ CUDNN:
 DATASET:
   COLOR_RGB: false
   DATASET: 'coco'
-  TEST_SET: 'val2017'
-  TRAIN_SET: 'train2017'
   FLIP: true
   ROT_FACTOR: 40
   SCALE_MIN: 0.5

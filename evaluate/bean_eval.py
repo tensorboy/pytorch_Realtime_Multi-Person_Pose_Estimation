@@ -126,24 +126,26 @@ def append_result(image_name, pods, upsample_keypoints, outputs):
             "score": 0
         }
         one_result["image_name"] = image_name
-        keypoints = np.zeros((5, 2))
+        keypoints = np.zeros((5, 3))
 
         all_scores = []
         for i in range(cfg.MODEL.NUM_KEYPOINTS):
             if i not in pod.body_parts.keys():
                 keypoints[i, 0] = 0
                 keypoints[i, 1] = 0
+                keypoints[i, 2] = 0
             else:
                 body_part = pod.body_parts[i]
                 center = (body_part.x * upsample_keypoints[1] + 0.5, body_part.y * upsample_keypoints[0] + 0.5)
                 keypoints[i, 0] = center[0]
                 keypoints[i, 1] = center[1]
+                keypoints[i, 2] = 1
 
                 score = pod.body_parts[i].score
                 all_scores.append(score)
 
         one_result["score"] = 1.
-        one_result["keypoints"] = list(keypoints.reshape(10))
+        one_result["keypoints"] = list(keypoints.reshape(15))
         outputs.append(one_result)
 
 
@@ -190,7 +192,7 @@ def run_eval(image_dir, vis_dir, model, preprocess):
         # subset indicated how many peoples found in this image.
         upsample_keypoints = (
         heatmap.shape[0] * cfg.MODEL.DOWNSAMPLE / scale_img, heatmap.shape[1] * cfg.MODEL.DOWNSAMPLE / scale_img)
-        append_result(img_paths[i], pods, upsample_keypoints, outputs)
+        append_result(os.path.basename(img_paths[i]), pods, upsample_keypoints, outputs)
 
     # Eval and show the final result!
     return eval_bean(outputs=outputs, ann_paths=ann_paths)
