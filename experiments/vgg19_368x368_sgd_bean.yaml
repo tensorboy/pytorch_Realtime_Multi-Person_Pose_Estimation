@@ -26,7 +26,7 @@ DATASET:
   TRAIN_ANNOTATIONS: []
   VAL_IMAGE_DIR: 'val'
   VAL_ANNOTATIONS: 'none'
-  TEST_IMAGE_DIR: 'tt'
+  TEST_IMAGE_DIR: 'test'
 
 MODEL:
   NAME: 'pose_resnet'

@@ -50,7 +50,6 @@ class BEANeval:
             self.params.img_names.append(anns['image_name'])
         for dt in dts:
             self._dts[dt['image_name']].append(dt)
-        self.evalImgs = defaultdict(list)  # per-image evaluation results
         self.eval = {}                     # accumulated evaluation results
 
     def evaluate(self):
@@ -102,10 +101,6 @@ class BEANeval:
             vg = g[2::3]
             k1 = np.count_nonzero(vg > 0)       # the number of visible keypoints
             bb = gt['bbox']
-            x0 = bb[0] - bb[2]          # x - width
-            x1 = bb[0] + bb[2] * 2      # x + 2 * width
-            y0 = bb[1] - bb[3]          # y - height
-            y1 = bb[1] + bb[3] * 2      # y + 2 * height
             for i, dt in enumerate(dts):
                 d = np.array(dt['keypoints'])
                 xd = d[0::3]
@@ -115,10 +110,7 @@ class BEANeval:
                     dx = xd - xg
                     dy = yd - yg
                 else:
-                    # measure minimum distance to keypoints in (x0,y0) & (x1,y1)
-                    z = np.zeros((k))
-                    dx = np.max((z, x0 - xd), axis=0) + np.max((z, xd - x1), axis=0)
-                    dy = np.max((z, y0 - yd), axis=0) + np.max((z, yd - y1), axis=0)
+                    raise Exception('No visible keypoints')
                 e = (dx ** 2 + dy ** 2) / vars / (gt['area'] + np.spacing(1)) / 2
                 if k1 > 0:
                     e = e[vg > 0]
@@ -185,8 +177,8 @@ class BEANeval:
                     if m == -1:
                         continue
                     dtIg[tind, dind] = gtIg[m]
-                    dtm[tind, dind] = gt[m]['id']
-                    gtm[tind, m] = d['id']
+                    dtm[tind, dind] = 1
+                    gtm[tind, m] = 1
         # set unmatched detections outside of area range to ignore
         a = np.array([d['area'] < aRng[0] or d['area'] > aRng[1] for d in dt]).reshape((1, len(dt)))
         dtIg = np.logical_or(dtIg, np.logical_and(dtm == 0, np.repeat(a, T, 0)))
@@ -195,8 +187,6 @@ class BEANeval:
             'image_id': img_name,
             'aRng': aRng,
             'maxDet': maxDet,
-            # 'dtIds': [d['id'] for d in dt],
-            # 'gtIds': [g['id'] for g in gt],
             'dtMatches': dtm,
             'gtMatches': gtm,
             'dtScores': [d['score'] for d in dt],
@@ -385,13 +375,11 @@ class Params:
         self.catIds = []
         self.iouThrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
         self.recThrs = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
-        self.maxDets = [20]
+        self.maxDets = [20]     # max detected pod number per image
         self.areaRng = [[0 ** 2, 1e5 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
         self.areaRngLbl = ['all', 'medium', 'large']
         self.useCats = 0
-        self.kpt_oks_sigmas = np.array(
-            [.26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89]) / 10.0
-
+        self.kpt_oks_sigmas = np.array([.5, .5, .5, .5, .5]) / 10.0
     def __init__(self):
         self.setKpParams()
         # useSegm is deprecated

@@ -299,6 +299,16 @@ def draw_pods(npimg, pods, imgcopy=False):
     return npimg
 
 
+def draw_bbox(npimg, anns):
+    for ann in anns:
+        bbox = ann['bbox']
+        print(bbox[0], bbox[1])
+        print(bbox[0] + bbox[2], bbox[1] + bbox[3])
+
+        cv2.rectangle(npimg, (bbox[0], bbox[1]),(bbox[0] + bbox[2], bbox[1] + bbox[3]),(0,255,0),2)
+    return npimg
+
+
 class BodyPart:
     """
     part_idx : part index(eg. 0 for nose)

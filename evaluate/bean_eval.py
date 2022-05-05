@@ -15,7 +15,7 @@ from lib.datasets.preprocessing import (inception_preprocess,
                                         ssd_preprocess, vgg_preprocess)
 from lib.network import im_transform
 from lib.config import cfg, update_config
-from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRender, draw_humans, draw_pods
+from lib.utils.common import draw_pods, draw_bbox
 from lib.utils.paf_to_pods import paf_to_pods_cpp
 
 PYTHON_VERSION = sys.version_info[0]
@@ -45,16 +45,29 @@ def eval_bean(outputs, ann_paths):
     return beanEval.stats[0]
 
 
-def add_bbox_info(anns):
-    print('Loading and preparing results...')
+def add_bbox_info(anns, margin=20, shape=None):
+
     tic = time.time()
     anns = copy.deepcopy(anns)
     for id, ann in enumerate(anns):
         s = ann['keypoints']
-        x = s[0::2]
-        y = s[1::2]
-        x0, x1, y0, y1 = np.min(x), np.max(x), np.min(y), np.max(y)
-        ann['area'] = (x1-x0)*(y1-y0)
+        x = s[0::3]
+        y = s[1::3]
+        print('x:', x)
+        print('y:', y)
+        x0 = max(0, round(np.min([a for a in x if a != 0])) - margin)
+        y0 = max(0, round(np.min([a for a in y if a != 0])) - margin)
+
+        if not shape:
+            x1 = round(np.max(x)) + margin
+            y1 = round(np.max(y)) + margin
+        else:
+            x1 = min(round(np.max(x)) + margin, shape[1])
+            y1 = min(round(np.max(y)) + margin, shape[0])
+
+        print(x0, y0, x1, y1)
+        ann['area'] = (x1 - x0) * (y1 - y0)
+        print(ann['area'])
         ann['bbox'] = [x0, y0, x1-x0, y1-y0]
     print('DONE (t={:0.2f}s)'.format(time.time() - tic))
     return anns
@@ -161,6 +174,7 @@ def run_eval(image_dir, vis_dir, model, preprocess):
     outputs = []
     print("Processing Images in validation set")
     for i in range(len(img_paths)):
+        cur_outputs = []
         if i % 10 == 0 and i != 0:
             print("Processed {} images".format(i))
         # load image and annotations
@@ -182,18 +196,21 @@ def run_eval(image_dir, vis_dir, model, preprocess):
         print('heatmap:', heatmap.shape)
         pods = paf_to_pods_cpp(heatmap, paf, cfg)
         print('pods:', pods)
-        out = draw_pods(oriImg, pods)
 
-        if not os.path.exists(vis_dir):
-            os.makedirs(vis_dir)
 
-        vis_path = os.path.join(vis_dir, file_name)
-        cv2.imwrite(vis_path, out)
         # subset indicated how many peoples found in this image.
         upsample_keypoints = (
         heatmap.shape[0] * cfg.MODEL.DOWNSAMPLE / scale_img, heatmap.shape[1] * cfg.MODEL.DOWNSAMPLE / scale_img)
         append_result(os.path.basename(img_paths[i]), pods, upsample_keypoints, outputs)
+        append_result(os.path.basename(img_paths[i]), pods, upsample_keypoints, cur_outputs)
 
+        out = draw_pods(oriImg, pods)
+        bbox = add_bbox_info(cur_outputs, shape=oriImg.shape[:2])
+        out = draw_bbox(out, bbox)
+        if not os.path.exists(vis_dir):
+            os.makedirs(vis_dir)
+        vis_path = os.path.join(vis_dir, file_name)
+        cv2.imwrite(vis_path, out)
     # Eval and show the final result!
     return eval_bean(outputs=outputs, ann_paths=ann_paths)
 
