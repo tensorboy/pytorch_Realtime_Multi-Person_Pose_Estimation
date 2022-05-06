@@ -113,12 +113,14 @@ def get_outputs(img, model, preprocess):
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
 
-    paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-    heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-
-    # for new openpose model
-    # paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-    # heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+    import evaluate
+    if evaluate.evaluation.NEW_OPENPOSE:
+        # for new openpose model
+        paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+        heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+    else:
+        paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+        heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
 
     return paf, heatmap, im_scale
 
@@ -157,7 +159,8 @@ def append_result(image_name, pods, upsample_keypoints, outputs):
                 score = pod.body_parts[i].score
                 all_scores.append(score)
 
-        one_result["score"] = 1.
+        # Use mean score of beans as the score of pod ?
+        one_result["score"] = np.mean(all_scores)
         one_result["keypoints"] = list(keypoints.reshape(15))
         outputs.append(one_result)
 

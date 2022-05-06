@@ -1,6 +1,6 @@
 EXPERIMENT_NAME: 'rtpose_lr001'
 DATA_DIR: 'data'
-OUTPUT_DIR: 'data/bean/output'
+OUTPUT_DIR: 'data/bean/output2'
 GPUS: 
   - 0
   - 1

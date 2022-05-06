@@ -11,6 +11,7 @@ from lib.network.openpose import OpenPose_Model
 SOURCE_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 NOW_WHAT = 'bean'
+NEW_OPENPOSE = False
 
 parser = argparse.ArgumentParser()
 
@@ -26,8 +27,6 @@ if NOW_WHAT == 'coco':
     anno_file = 'data/coco/annotations/person_keypoints_val2017.json'
     vis_dir = 'data/coco/images/vis_val2017'
 
-
-
 elif NOW_WHAT == 'bean':
     parser.add_argument('--cfg', help='experiment configure file name',
                         default=os.path.join(SOURCE_DIR, 'experiments/vgg19_368x368_sgd_bean.yaml'), type=str)
@@ -35,30 +34,27 @@ elif NOW_WHAT == 'bean':
     update_config(cfg, args)
     weight_path = os.path.join(SOURCE_DIR, cfg.MODEL.TRAINED)
     image_dir = os.path.join(SOURCE_DIR, cfg.DATASET.TEST_IMAGE_DIR)
+    vis_dir = os.path.join(SOURCE_DIR, cfg.OUTPUT_DIR)
     anno_file = None
-    vis_dir = 'data/bean/output2'
 
 # update config file
 update_config(cfg, args)
 
 # Notice, if you using the
 with torch.autograd.no_grad():
-    # this path is with respect to the root of the project
-    # weight_name = '/data/rtpose/rtpose_lr001/1/_ckpt_epoch_82.ckpt'
-    # state_dict = torch.load(weight_name)['state_dict']
 
-    # new_state_dict = OrderedDict()
-    # for k,v in state_dict.items():
-    #     name = k[6:]
-    #     new_state_dict[name]=v
+    if NEW_OPENPOSE:
+        model = OpenPose_Model(l2_stages=4, l1_stages=2, paf_out_channels=8, heat_out_channels=6)
+        model = torch.nn.DataParallel(model).cuda()
+        wts_dict = torch.load(weight_path)
 
-    model = get_model(trunk='vgg19', dataset=NOW_WHAT)
-    # model = OpenPose_Model(l2_stages=4, l1_stages=2, paf_out_channels=8, heat_out_channels=6)
-    # model = torch.nn.DataParallel(model).cuda()
-    wts_dict = torch.load(weight_path)
-    wts_dict_corrected = {k.replace('module.', ''): v for k, v in wts_dict.items()}
-    model.load_state_dict(wts_dict_corrected)
-    # model.load_state_dict(new_state_dict)
+    else:
+        model = get_model(trunk='vgg19', dataset=NOW_WHAT)
+        model = torch.nn.DataParallel(model).cuda()
+        wts_dict = torch.load(weight_path)
+        # wts_dict = {k.replace('module.', ''): v for k, v in wts_dict.items()}
+
+    model.load_state_dict(wts_dict)
     model.eval()
     model.float()
     model = model.cuda()
