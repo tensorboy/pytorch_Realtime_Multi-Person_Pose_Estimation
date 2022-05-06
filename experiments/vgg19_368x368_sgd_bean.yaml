@@ -1,0 +1,77 @@
+EXPERIMENT_NAME: 'rtpose_lr001'
+DATA_DIR: 'data'
+OUTPUT_DIR: 'data/bean/output2'
+GPUS: 
+  - 0
+  - 1
+  - 2
+  - 3
+WORKERS: 8
+PRINT_FREQ: 100
+
+CUDNN:
+  BENCHMARK: true
+  DETERMINISTIC: false
+  ENABLED: true
+  
+DATASET:
+  COLOR_RGB: false
+  DATASET: 'bean'
+  FLIP: true
+  ROT_FACTOR: 40
+  SCALE_MIN: 0.5
+  SCALE_MAX: 1.1               
+  IMAGE_SIZE: 368  
+  TRAIN_IMAGE_DIR: 'train'
+  TRAIN_ANNOTATIONS: []
+  VAL_IMAGE_DIR: 'val'
+  VAL_ANNOTATIONS: 'none'
+  TEST_IMAGE_DIR: 'test'
+
+MODEL:
+  NAME: 'pose_resnet'
+  PRETRAINED: 'models/pytorch/imagenet/resnet101-5d3b4d8f.pth'
+  TRAINED: 'network/weight/4.20/best_bean.pth'
+  HEATMAP_SIZE:
+  - 46
+  - 46
+  SIGMA: 7
+  NUM_KEYPOINTS: 5
+  DOWNSAMPLE: 8
+  TARGET_TYPE: 'gaussian'
+  
+LOSS:
+  USE_TARGET_WEIGHT: true
+  
+PRE_TRAIN :
+  LR : 0.01
+  OPTIMIZER : 'sgd'
+  MOMENTUM : 0.9
+  WD : 0.0001
+  NESTEROV : false
+  FREEZE_BASE_EPOCHS: 5
+       
+TRAIN:
+  BATCH_SIZE_PER_GPU: 3
+  SHUFFLE: true
+  EPOCHS: 75
+  OPTIMIZER: 'sgd'
+  LR: 1.
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 90
+  - 120
+  WD: 0.0000
+  GAMMA1: 0.99
+  GAMMA2: 0.0
+  MOMENTUM: 0.9
+  NESTEROV: true
+  PRINT_FREQ: 20
+  
+TEST:
+  BATCH_SIZE_PER_GPU: 18
+  FLIP_TEST: true
+  THRESH_HEATMAP: 0.1  # original: 0.1
+  THRESH_PAF: 0.05
+  NUM_INTERMED_PTS_BETWEEN_KEYPOINTS: 10
+

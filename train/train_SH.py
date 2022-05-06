@@ -9,9 +9,9 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 #import encoding
-from network.rtpose_vgg import get_model, use_vgg
-from network import rtpose_shufflenetV2
-import network.rtpose_hourglass as hourglass
+from lib.network.rtpose_vgg import get_model, use_vgg
+from lib.network import rtpose_shufflenetV2
+import lib.network.rtpose_hourglass as hourglass
 from training.datasets.coco import get_loader
 
 # Hyper-params

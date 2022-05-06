@@ -1,6 +1,11 @@
+import random
+
 import cv2
 import numpy as np
 import time
+
+from PIL import Image
+from matplotlib import pyplot as plt
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
 
 from scipy.ndimage.morphology import generate_binary_structure
@@ -35,6 +40,12 @@ def find_peaks(param, img):
         2, 1)) == img) * (img > param)
     # Note reverse ([::-1]): we return [[x y], [x y]...] instead of [[y x], [y
     # x]...]
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(121)  # left side
+    # ax2 = fig.add_subplot(122)  # right side
+    # ax1.imshow(img)
+    # ax2.imshow(peaks_binary)
+    # plt.show()
     return np.array(np.nonzero(peaks_binary)[::-1]).T
 
 
@@ -100,7 +111,10 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
     win_size = 2
 
     for joint in range(config.MODEL.NUM_KEYPOINTS):
-        map_orig = heatmaps[:, :, joint]
+        map_orig = heatmaps[:, :, joint]        # (46, xx) or (xx, 46) with xx > 46
+        # print('map_orig:', map_orig)
+        # img = Image.fromarray(map_orig)
+        # img.show()
         peak_coords = find_peaks(config.TEST.THRESH_HEATMAP, map_orig)
         peaks = np.zeros((len(peak_coords), 4))
         for i, peak in enumerate(peak_coords):
@@ -118,12 +132,11 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
                 # Gaussian filtering takes an average of 0.8ms/peak (and there might be
                 # more than one peak per joint!) -> For now, skip it (it's
                 # accurate enough)
-                map_upsamp = gaussian_filter(
-                    map_upsamp, sigma=3) if bool_gaussian_filt else map_upsamp
+                map_upsamp = gaussian_filter(map_upsamp, sigma=3) if bool_gaussian_filt else map_upsamp
 
                 # Obtain the coordinates of the maximum value in the patch
-                location_of_max = np.unravel_index(
-                    map_upsamp.argmax(), map_upsamp.shape)
+                location_of_max = np.unravel_index(map_upsamp.argmax(), map_upsamp.shape)
+
                 # Remember that peaks indicates [x,y] -> need to reverse it for
                 # [y,x]
                 location_of_patch_center = compute_resized_coords(
@@ -371,11 +384,13 @@ def paf_to_pose(heatmaps, pafs, config):
 
 def paf_to_pose_cpp(heatmaps, pafs, config):
     humans = []
-    joint_list_per_joint_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)
-
+    joint_list_per_joint_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)  # len: 18
     joint_list = np.array(
         [tuple(peak) + (joint_type,) for joint_type, joint_peaks in enumerate(joint_list_per_joint_type) for peak in
-         joint_peaks]).astype(np.float32)
+         joint_peaks]).astype(np.float32)   # shape: (xx, 5)  5 stands for [x_pos, y_pos, score, count_joints, joint_id]
+
+    # print('joint_list:', joint_list)
+    # print('joint_list.shape:', joint_list.shape)
 
     if joint_list.shape[0] > 0:
         joint_list = np.expand_dims(joint_list, 0)
@@ -383,7 +398,10 @@ def paf_to_pose_cpp(heatmaps, pafs, config):
             pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
         heatmap_upsamp = cv2.resize(
             heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
+        # print('heatmap_upsamp:', heatmap_upsamp.shape)      # with 368 (46 * 8) for either height or width
+        # print('paf_upsamp:', paf_upsamp.shape)              # with 368 (46 * 8) for either height or width
         pafprocess.process_paf(joint_list, heatmap_upsamp, paf_upsamp)
+
         for human_id in range(pafprocess.get_num_humans()):
             human = Human([])
             is_added = False
