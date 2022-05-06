@@ -9,9 +9,9 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 #import encoding
-from lib.network.rtpose_vgg import get_model, use_vgg
-from lib.network import rtpose_shufflenetV2
-from datasets.coco import get_loader
+from network.rtpose_vgg import get_model, use_vgg
+from network import rtpose_shufflenetV2
+from training.datasets.coco import get_loader
 
 # Hyper-params
 parser = argparse.ArgumentParser(description='PyTorch rtpose Training')

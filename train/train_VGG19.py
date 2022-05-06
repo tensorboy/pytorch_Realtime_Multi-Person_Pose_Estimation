@@ -1,128 +1,134 @@
 import argparse
-import os
-import sys
 import time
-from collections import OrderedDict
-
+import os
 import numpy as np
-from matplotlib import pyplot as plt
-sys.path.append(os.path.abspath("./"))
-
-from lib.config import update_config, cfg
-
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from lib.network.rtpose_vgg import get_model, use_vgg
-from lib.datasets import transforms, datasets
+from lib.datasets import coco, transforms, datasets
+from lib.config import update_config
 
-SOURCE_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+DATA_DIR = '/data/coco'
 
-NOW_WHAT = 'bean'
-
-if NOW_WHAT == 'coco':
-    # For coco dataset training
-    DATA_DIR = os.path.join(SOURCE_DIR, 'data/coco')
-    ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
-    ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
-    IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
-    IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
-    BATCH_SIZE = 5
+ANNOTATIONS_TRAIN = [os.path.join(DATA_DIR, 'annotations', item) for item in ['person_keypoints_train2017.json']]
+ANNOTATIONS_VAL = os.path.join(DATA_DIR, 'annotations', 'person_keypoints_val2017.json')
+IMAGE_DIR_TRAIN = os.path.join(DATA_DIR, 'images/train2017')
+IMAGE_DIR_VAL = os.path.join(DATA_DIR, 'images/val2017')
 
 
+def train_cli(parser):
+    group = parser.add_argument_group('dataset and loader')
+    group.add_argument('--train-annotations', default=ANNOTATIONS_TRAIN)
+    group.add_argument('--train-image-dir', default=IMAGE_DIR_TRAIN)
+    group.add_argument('--val-annotations', default=ANNOTATIONS_VAL)
+    group.add_argument('--val-image-dir', default=IMAGE_DIR_VAL)
+    group.add_argument('--pre-n-images', default=8000, type=int,
+                       help='number of images to sampe for pretraining')
+    group.add_argument('--n-images', default=None, type=int,
+                       help='number of images to sample')
+    group.add_argument('--duplicate-data', default=None, type=int,
+                       help='duplicate data')
+    group.add_argument('--loader-workers', default=8, type=int,
+                       help='number of workers for data loading')
+    group.add_argument('--batch-size', default=72, type=int,
+                       help='batch size')
+    group.add_argument('--lr', '--learning-rate', default=1., type=float,
+                    metavar='LR', help='initial learning rate')
+    group.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                    help='momentum')
+    group.add_argument('--weight-decay', '--wd', default=0.000, type=float,
+                    metavar='W', help='weight decay (default: 1e-4)') 
+    group.add_argument('--nesterov', dest='nesterov', default=True, type=bool)     
+    group.add_argument('--print_freq', default=20, type=int, metavar='N',
+                    help='number of iterations to print the training statistics')    
+                   
+                                         
 def train_factory(args, preprocess, target_transforms):
     train_datas = [datasets.CocoKeypoints(
-        root=os.path.join(SOURCE_DIR,cfg.DATASET.TRAIN_IMAGE_DIR),
+        root=args.train_image_dir,
         annFile=item,
         preprocess=preprocess,
         image_transform=transforms.image_transform_train,
         target_transforms=target_transforms,
         n_images=args.n_images,
-    ) for item in cfg.DATASET.TRAIN_ANNOTATIONS]
+    ) for item in args.train_annotations]
 
-    train_data = torch.utils.data.ConcatDataset(train_datas)  # shape: (56599, 3, 3, 368, 368)
+    train_data = torch.utils.data.ConcatDataset(train_datas)
+    
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size, shuffle=True,
-        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True
-    )
+        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True)
 
     val_data = datasets.CocoKeypoints(
-        root=os.path.join(SOURCE_DIR, cfg.DATASET.VAL_IMAGE_DIR),
-        annFile=cfg.DATASET.VAL_ANNOTATIONS,
+        root=args.val_image_dir,
+        annFile=args.val_annotations,
         preprocess=preprocess,
         image_transform=transforms.image_transform_train,
         target_transforms=target_transforms,
         n_images=args.n_images,
-    )  # shape: (2346, 3, 3, 368, 368)
-
+    )
     val_loader = torch.utils.data.DataLoader(
-        val_data, batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU, shuffle=False,
-        pin_memory=args.pin_memory, num_workers=cfg.WORKERS, drop_last=True)
+        val_data, batch_size=args.batch_size, shuffle=False,
+        pin_memory=args.pin_memory, num_workers=args.loader_workers, drop_last=True)
 
     return train_loader, val_loader, train_data, val_data
 
-
-def bean_train_factory(cfg, preprocess, target_transforms):
-    print(SOURCE_DIR)
-    print(cfg.DATASET.TRAIN_IMAGE_DIR)
-    print(os.path.join(SOURCE_DIR, cfg.DATASET.TRAIN_IMAGE_DIR))
-
-    train_data = datasets.SoybeanKeypoints(
-        root=os.path.join(SOURCE_DIR, cfg.DATASET.TRAIN_IMAGE_DIR),
-        preprocess=preprocess,
-        image_transform=transforms.image_transform_train,
-        target_transforms=target_transforms,
-        stride=8
-    )
-    print(len(train_data))
-    train_loader = torch.utils.data.DataLoader(
-        train_data, batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU, shuffle=True,
-        pin_memory=args.pin_memory, num_workers=cfg.WORKERS, drop_last=True
-    )
-    print('train length:', len(train_loader.dataset))
-
-    val_data = datasets.SoybeanKeypoints(
-        root=os.path.join(SOURCE_DIR, cfg.DATASET.VAL_IMAGE_DIR),
-        preprocess=preprocess,
-        image_transform=transforms.image_transform_train,
-        target_transforms=target_transforms,
-        stride=8
-    )
-    print(len(val_data))
-
-    val_loader = torch.utils.data.DataLoader(
-        val_data, batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU, shuffle=False,
-        pin_memory=args.pin_memory, num_workers=cfg.WORKERS, drop_last=True)
-    print('val length:', len(val_loader.dataset))
-
-    return train_loader, val_loader, train_data, val_data
-
-
-def cli(now_what):
+def cli():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    if now_what == 'coco':
-        parser.add_argument('--cfg', help='experiment configure file name',
-                            default='./experiments/vgg19_368x368_sgd.yaml', type=str)
-    elif now_what == 'bean':
-        parser.add_argument('--cfg', help='experiment configure file name',
-                            default='./experiments/vgg19_368x368_sgd_bean.yaml', type=str)
-
+    train_cli(parser)
+    parser.add_argument('-o', '--output', default=None,
+                        help='output file')
+    parser.add_argument('--stride-apply', default=1, type=int,
+                        help='apply and reset gradients every n batches')
+    parser.add_argument('--epochs', default=75, type=int,
+                        help='number of epochs to train')
+    parser.add_argument('--freeze-base', default=0, type=int,
+                        help='number of epochs to train with frozen base')
+    parser.add_argument('--pre-lr', type=float, default=1e-4,
+                        help='pre learning rate')
+    parser.add_argument('--update-batchnorm-runningstatistics',
+                        default=False, action='store_true',
+                        help='update batch norm running statistics')
+    parser.add_argument('--square-edge', default=368, type=int,
+                        help='square edge of input images')
+    parser.add_argument('--ema', default=1e-3, type=float,
+                        help='ema decay constant')
+    parser.add_argument('--debug-without-plots', default=False, action='store_true',
+                        help='enable debug but dont plot')
+    parser.add_argument('--disable-cuda', action='store_true',
+                        help='disable CUDA')                        
+    parser.add_argument('--model_path', default='./network/weight/', type=str, metavar='DIR',
+                    help='path to where the model saved')                         
     args = parser.parse_args()
-    # update config file
-    update_config(cfg, args)
+
     # add args.device
     args.device = torch.device('cpu')
     args.pin_memory = False
-    if cfg.CUDNN.ENABLED and torch.cuda.is_available():
+    if not args.disable_cuda and torch.cuda.is_available():
         args.device = torch.device('cuda')
         args.pin_memory = True
-
+        
     return args
+
+args = cli()
+
+print("Loading dataset...")
+# load train data
+preprocess = transforms.Compose([
+        transforms.Normalize(),
+        transforms.RandomApply(transforms.HFlip(), 0.5),
+        transforms.RescaleRelative(),
+        transforms.Crop(args.square_edge),
+        transforms.CenterPad(args.square_edge),
+    ])
+train_loader, val_loader, train_data, val_data = train_factory(args, preprocess, target_transforms=None)
 
 
 def build_names():
@@ -135,29 +141,24 @@ def build_names():
 
 
 def get_loss(saved_for_loss, heat_temp, vec_temp):
+
     names = build_names()
     saved_for_log = OrderedDict()
     criterion = nn.MSELoss(reduction='mean').cuda()
     total_loss = 0
-    # print(vec_temp.shape)       # torch.Size([batch_size, 38, 46, 46])
+
     for j in range(6):
         pred1 = saved_for_loss[2 * j]
-        pred2 = saved_for_loss[2 * j + 1]
+        pred2 = saved_for_loss[2 * j + 1] 
+
 
         # Compute losses
         loss1 = criterion(pred1, vec_temp)
-        loss2 = criterion(pred2, heat_temp)
-
-        fig = plt.figure()
-        ax1 = fig.add_subplot(121)  # left side
-        ax2 = fig.add_subplot(122)  # right side
-        print('loss %d:' % (j+1))
-        ax1.imshow(pred2[0][0].cpu().detach().numpy())
-        ax2.imshow(heat_temp[0][0].cpu().detach().numpy())
-        plt.show()
+        loss2 = criterion(pred2, heat_temp) 
 
         total_loss += loss1
         total_loss += loss2
+        # print(total_loss)
 
         # Get value from Variable and save for log
         saved_for_log[names[2 * j]] = loss1.item()
@@ -171,36 +172,42 @@ def get_loss(saved_for_loss, heat_temp, vec_temp):
     saved_for_log['min_paf'] = torch.min(saved_for_loss[-2].data).item()
 
     return total_loss, saved_for_log
-
+         
 
 def train(train_loader, model, optimizer, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
+    
     meter_dict = {}
     for name in build_names():
         meter_dict[name] = AverageMeter()
     meter_dict['max_ht'] = AverageMeter()
-    meter_dict['min_ht'] = AverageMeter()
-    meter_dict['max_paf'] = AverageMeter()
+    meter_dict['min_ht'] = AverageMeter()    
+    meter_dict['max_paf'] = AverageMeter()    
     meter_dict['min_paf'] = AverageMeter()
-
+    
     # switch to train mode
     model.train()
 
     end = time.time()
     for i, (img, heatmap_target, paf_target) in enumerate(train_loader):
+        # measure data loading time
+        #writer.add_text('Text', 'text logged at step:' + str(i), i)
+        
+        #for name, param in model.named_parameters():
+        #    writer.add_histogram(name, param.clone().cpu().data.numpy(),i)        
         data_time.update(time.time() - end)
 
         img = img.cuda()
         heatmap_target = heatmap_target.cuda()
         paf_target = paf_target.cuda()
         # compute output
-        _, saved_for_loss = model(img)
+        _,saved_for_loss = model(img)
+        
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, paf_target)
-
-        for name, _ in meter_dict.items():
+        
+        for name,_ in meter_dict.items():
             meter_dict[name].update(saved_for_log[name], img.size(0))
         losses.update(total_loss, img.size(0))
 
@@ -212,28 +219,28 @@ def train(train_loader, model, optimizer, epoch):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if i % cfg.TRAIN.PRINT_FREQ == 0:
+        if i % args.print_freq == 0:
             print_string = 'Epoch: [{0}][{1}/{2}]\t'.format(epoch, i, len(train_loader))
-            print_string += 'Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format(data_time=data_time)
+            print_string +='Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format( data_time=data_time)
             print_string += 'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(loss=losses)
 
             for name, value in meter_dict.items():
-                print_string += '{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
+                print_string+='{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
             print(print_string)
-    return losses.avg
-
-
+    return losses.avg  
+        
+        
 def validate(val_loader, model, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-
+    
     meter_dict = {}
     for name in build_names():
         meter_dict[name] = AverageMeter()
     meter_dict['max_ht'] = AverageMeter()
-    meter_dict['min_ht'] = AverageMeter()
-    meter_dict['max_paf'] = AverageMeter()
+    meter_dict['min_ht'] = AverageMeter()    
+    meter_dict['max_paf'] = AverageMeter()    
     meter_dict['min_paf'] = AverageMeter()
     # switch to train mode
     model.eval()
@@ -245,35 +252,33 @@ def validate(val_loader, model, epoch):
         img = img.cuda()
         heatmap_target = heatmap_target.cuda()
         paf_target = paf_target.cuda()
-
+        
         # compute output
-        _, saved_for_loss = model(img)
-
+        _,saved_for_loss = model(img)
+        
         total_loss, saved_for_log = get_loss(saved_for_loss, heatmap_target, paf_target)
-
-        # for name,_ in meter_dict.items():
+               
+        #for name,_ in meter_dict.items():
         #    meter_dict[name].update(saved_for_log[name], img.size(0))
-
+            
         losses.update(total_loss.item(), img.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
-        end = time.time()
-        if i % cfg.TRAIN.PRINT_FREQ == 0:
+        end = time.time()  
+        if i % args.print_freq == 0:
             print_string = 'Epoch: [{0}][{1}/{2}]\t'.format(epoch, i, len(val_loader))
-            print_string += 'Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format(data_time=data_time)
+            print_string +='Data time {data_time.val:.3f} ({data_time.avg:.3f})\t'.format( data_time=data_time)
             print_string += 'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(loss=losses)
 
             for name, value in meter_dict.items():
-                print_string += '{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
+                print_string+='{name}: {loss.val:.4f} ({loss.avg:.4f})\t'.format(name=name, loss=value)
             print(print_string)
-
+                
     return losses.avg
-
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
-
     def __init__(self):
         self.reset()
 
@@ -289,148 +294,59 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-
-def train_coco():
-    print("Loading dataset...")
-    # load train data
-    preprocess = transforms.Compose([
-        transforms.Normalize(),
-        transforms.RandomApply(transforms.HFlip(), 0.5),  # Is it necessary ?
-        transforms.RescaleRelative(),
-        transforms.Crop(cfg.DATASET.IMAGE_SIZE),  # 368
-        transforms.CenterPad(cfg.DATASET.IMAGE_SIZE),  # 368
-    ])
-    train_loader, val_loader, train_data, val_data = train_factory(cfg, preprocess, target_transforms=None)
-
-    # model
-    model = get_model(dataset=NOW_WHAT, trunk='vgg19')
-    model = torch.nn.DataParallel(model).cuda()
-    # load pretrained
-    use_vgg(model)
-
-    # Fix the VGG weights first, and then the weights will be released
-    for i in range(20):
-        for param in model.module.model0[i].parameters():
-            param.requires_grad = False
-
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=cfg.TRAIN.LR,
-                                momentum=cfg.TRAIN.MOMENTUM,
-                                weight_decay=cfg.TRAIN.WD,
-                                nesterov=cfg.TRAIN.NESTEROV)
-
-    for epoch in range(5):
-        # train for one epoch
-
-        train_loss = train(train_loader, model, optimizer, epoch)
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        # Release all weights
-    for param in model.module.parameters():
-        param.requires_grad = True
-
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=cfg.TRAIN.LR,
-                                momentum=cfg.TRAIN.MOMENTUM,
-                                weight_decay=cfg.TRAIN.WD,
-                                nesterov=cfg.TRAIN.NESTEROV)
-
-    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001,
-                                     threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
-
-    best_val_loss = np.inf
-
-    model_save_filename = f'network/weight/best_pose.pth'
-    for epoch in range(5, cfg.TRAIN.EPOCHS):
-
-        # train for one epoch
-        train_loss = train(train_loader, model, optimizer, epoch)
-
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        lr_scheduler.step(val_loss)
-
-        is_best = val_loss < best_val_loss
-        best_val_loss = min(val_loss, best_val_loss)
-        if is_best:
-            torch.save(model.state_dict(), model_save_filename)
+# model
+model = get_model(trunk='vgg19')
+model = torch.nn.DataParallel(model).cuda()
+# load pretrained
+use_vgg(model)
 
 
-def train_soybean():
-    print("Loading dataset...")
-    preprocess = transforms.Compose([
-        transforms.NormalizeBean(),
-        transforms.RescaleRelativeBean(),
-        transforms.CropBean(cfg.DATASET.IMAGE_SIZE),  # 368
-        transforms.CenterPadBean(cfg.DATASET.IMAGE_SIZE),  # 368
-    ])
+# Fix the VGG weights first, and then the weights will be released
+for i in range(20):
+    for param in model.module.model0[i].parameters():
+        param.requires_grad = False
 
-    train_loader, val_loader, train_data, val_data = bean_train_factory(cfg, preprocess=preprocess,
-                                                                        target_transforms=None)
+trainable_vars = [param for param in model.parameters() if param.requires_grad]
+optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                           momentum=args.momentum,
+                           weight_decay=args.weight_decay,
+                           nesterov=args.nesterov)     
+                                                                                          
+for epoch in range(5):
+    # train for one epoch
+    train_loss = train(train_loader, model, optimizer, epoch)
 
-    # model
-    model = get_model(dataset=NOW_WHAT, trunk='vgg19')
-    model = torch.nn.DataParallel(model).cuda()
-    # load pretrained
-    use_vgg(model)
+    # evaluate on validation set
+    val_loss = validate(val_loader, model, epoch)  
+                                            
+# Release all weights                                   
+for param in model.module.parameters():
+    param.requires_grad = True
 
-    # Fix the VGG weights first, and then the weights will be released
-    for i in range(20):
-        for param in model.module.model0[i].parameters():
-            param.requires_grad = False
+trainable_vars = [param for param in model.parameters() if param.requires_grad]
+optimizer = torch.optim.SGD(trainable_vars, lr=args.lr,
+                           momentum=args.momentum,
+                           weight_decay=args.weight_decay,
+                           nesterov=args.nesterov)          
+                                                    
+lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=cfg.TRAIN.LR,
-                                momentum=cfg.TRAIN.MOMENTUM,
-                                weight_decay=cfg.TRAIN.WD,
-                                nesterov=cfg.TRAIN.NESTEROV)
-
-    for epoch in range(5):
-        # train for one epoch
-
-        train_loss = train(train_loader, model, optimizer, epoch)
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        # Release all weights
-    for param in model.module.parameters():
-        param.requires_grad = True
-
-    trainable_vars = [param for param in model.parameters() if param.requires_grad]
-    optimizer = torch.optim.SGD(trainable_vars, lr=cfg.TRAIN.LR,
-                                momentum=cfg.TRAIN.MOMENTUM,
-                                weight_decay=cfg.TRAIN.WD,
-                                nesterov=cfg.TRAIN.NESTEROV)
-
-    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.8, patience=5, verbose=True, threshold=0.0001,
-                                     threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
-
-    best_val_loss = np.inf
-
-    model_save_filename = 'network/weight/best_bean.pth'
-    for epoch in range(5, cfg.TRAIN.EPOCHS):
-
-        # train for one epoch
-        train_loss = train(train_loader, model, optimizer, epoch)
-
-        # evaluate on validation set
-        val_loss = validate(val_loader, model, epoch)
-
-        lr_scheduler.step(val_loss)
-
-        is_best = val_loss < best_val_loss
-        best_val_loss = min(val_loss, best_val_loss)
-        if is_best:
-            torch.save(model.state_dict(), model_save_filename)
-            print('better model has been saved: ', model_save_filename)
-            print()
+best_val_loss = np.inf
 
 
-if __name__ == '__main__':
-    args = cli(NOW_WHAT)
-    if NOW_WHAT == 'coco':
-        train_coco()
-    elif NOW_WHAT == 'bean':
-        train_soybean()
+model_save_filename = './network/weight/best_pose.pth'
+for epoch in range(5, args.epochs):
+
+    # train for one epoch
+    train_loss = train(train_loader, model, optimizer, epoch)
+
+    # evaluate on validation set
+    val_loss = validate(val_loader, model, epoch)   
+    
+    lr_scheduler.step(val_loss)                        
+    
+    is_best = val_loss<best_val_loss
+    best_val_loss = min(val_loss, best_val_loss)
+    if is_best:
+        torch.save(model.state_dict(), model_save_filename)      
+          

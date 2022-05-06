@@ -1,7 +1,5 @@
 import functools
 import math
-import os
-
 import numpy as np
 
 from .coco import COCO_KEYPOINTS, HFLIP
@@ -54,5 +52,3 @@ def mask_valid_area(intensities, valid_area):
         intensities[:, max_i:, :] = 0
     if max_j < intensities.shape[2]:
         intensities[:, :, max_j:] = 0
-
-

@@ -30,7 +30,6 @@ _C.MODEL = CN()
 _C.MODEL.NAME = 'pose_hrnet'
 _C.MODEL.INIT_WEIGHTS = True
 _C.MODEL.PRETRAINED = ''
-_C.MODEL.TRAINED = ''
 _C.MODEL.NUM_JOINTS = 17
 _C.MODEL.TAG_PER_JOINT = True
 _C.MODEL.TARGET_TYPE = 'gaussian'
@@ -51,13 +50,14 @@ _C.LOSS.USE_DIFFERENT_JOINTS_WEIGHT = False
 _C.DATASET = CN()
 _C.DATASET.ROOT = ''
 _C.DATASET.DATASET = 'mpii'
+_C.DATASET.TRAIN_SET = 'train'
+_C.DATASET.TEST_SET = 'valid'
 _C.DATASET.DATA_FORMAT = 'jpg'
 _C.DATASET.HYBRID_JOINTS_TYPE = ''
 _C.DATASET.TRAIN_IMAGE_DIR = ''
 _C.DATASET.TRAIN_ANNOTATIONS = []
 _C.DATASET.VAL_IMAGE_DIR = ''
 _C.DATASET.VAL_ANNOTATIONS = ''
-_C.DATASET.TEST_IMAGE_DIR = ''
 
 # training data augmentation
 _C.DATASET.FLIP = True
@@ -100,7 +100,6 @@ _C.TRAIN.CHECKPOINT = ''
 
 _C.TRAIN.BATCH_SIZE_PER_GPU = 32
 _C.TRAIN.SHUFFLE = True
-_C.TRAIN.PRINT_FREQ = 20
 
 # testing
 _C.TEST = CN()
@@ -140,6 +139,7 @@ _C.DEBUG.SAVE_HEATMAPS_PRED = False
 def update_config(cfg, args):
     cfg.defrost()
     cfg.merge_from_file(args.cfg)
+    cfg.merge_from_list(args.opts)
 
     cfg.DATASET.ROOT = os.path.join(
         cfg.DATA_DIR, cfg.DATASET.DATASET
@@ -150,16 +150,12 @@ def update_config(cfg, args):
     cfg.DATASET.VAL_IMAGE_DIR = os.path.join(
         cfg.DATASET.ROOT, cfg.DATASET.VAL_IMAGE_DIR
     )
-    cfg.DATASET.TEST_IMAGE_DIR = os.path.join(
-        cfg.DATASET.ROOT, cfg.DATASET.TEST_IMAGE_DIR
-    )
-    cfg.DATASET.TRAIN_ANNOTATIONS = [os.path.join(
+    cfg.DATASET.TRAIN_ANNOTATIONS= [os.path.join(
         cfg.DATASET.ROOT, item) for item in cfg.DATASET.TRAIN_ANNOTATIONS]
         
     cfg.DATASET.VAL_ANNOTATIONS = os.path.join(
         cfg.DATASET.ROOT, cfg.DATASET.VAL_ANNOTATIONS
-    )
-
+    )  
     cfg.MODEL.PRETRAINED = os.path.join(
         cfg.DATA_DIR, cfg.MODEL.PRETRAINED
     )
