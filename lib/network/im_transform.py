@@ -121,8 +121,6 @@ def crop_with_factor(im, dest_size=None, factor=32, is_ceil=True):
     im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
     im_size_max = np.max(im_shape[0:2])
-    # im_scale = 1.
-    # if max_size is not None and im_size_min > max_size:
     im_scale = float(dest_size) / im_size_min
     im = cv2.resize(im, None, fx=im_scale, fy=im_scale)
 

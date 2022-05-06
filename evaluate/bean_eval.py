@@ -18,11 +18,6 @@ from lib.config import cfg, update_config
 from lib.utils.common import draw_pods, draw_bbox
 from lib.utils.paf_to_pods import paf_to_pods_cpp
 
-PYTHON_VERSION = sys.version_info[0]
-if PYTHON_VERSION == 2:
-    from urllib import urlretrieve
-elif PYTHON_VERSION == 3:
-    from urllib.request import urlretrieve
 
 def eval_bean(outputs, ann_paths):
     """Evaluate images on Soybean test set
@@ -45,9 +40,14 @@ def eval_bean(outputs, ann_paths):
     return beanEval.stats[0]
 
 
-def add_bbox_info(anns, margin=20, shape=None):
-
-    tic = time.time()
+def add_bbox_info(anns, margin=15, shape=None):
+    """
+    compute bbox information and add it to the annotation
+    :param anns: list of dictionaries, each stores annotation for one pod
+    :param margin: bounding box margin added to original box
+    :param shape: the shape (h, w) of the original image
+    :returns : the updated annotation
+    """
     anns = copy.deepcopy(anns)
     for id, ann in enumerate(anns):
         s = ann['keypoints']
@@ -65,27 +65,29 @@ def add_bbox_info(anns, margin=20, shape=None):
             x1 = min(round(np.max(x)) + margin, shape[1])
             y1 = min(round(np.max(y)) + margin, shape[0])
 
-        print(x0, y0, x1, y1)
         ann['area'] = (x1 - x0) * (y1 - y0)
-        print(ann['area'])
         ann['bbox'] = [x0, y0, x1-x0, y1-y0]
-    print('DONE (t={:0.2f}s)'.format(time.time() - tic))
     return anns
 
 
-def loadRes(resFile):
-    with open(resFile) as f:
+def loadRes(res_file):
+    """
+    Load temporary result file
+    :param res_file: the path of temporary result json file
+    :returns : the regularized annotation
+    """
+    with open(res_file) as f:
         anns = json.load(f)
     assert type(anns) == list, 'results in not an array of objects'
-    anns = add_bbox_info(anns)
-    return anns
+    return add_bbox_info(anns)
+
 
 def get_outputs(img, model, preprocess):
     """Computes the averaged heatmap and paf for the given image
-    :param multiplier:
-    :param origImg: numpy array, the image being processed
+    :param img: numpy array, the image being processed
     :param model: pytorch model
-    :returns: numpy arrays, the averaged paf and heatmap
+    :param preprocess: the preprocess method
+    :returns: the averaged paf and heatmap and a scale param
     """
     inp_size = cfg.DATASET.IMAGE_SIZE
 
@@ -113,8 +115,8 @@ def get_outputs(img, model, preprocess):
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
 
-    import evaluate
-    if evaluate.evaluation.NEW_OPENPOSE:
+    from evaluate.evaluation import NEW_OPENPOSE
+    if NEW_OPENPOSE:
         # for new openpose model
         paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
         heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
@@ -127,20 +129,17 @@ def get_outputs(img, model, preprocess):
 
 def append_result(image_name, pods, upsample_keypoints, outputs):
     """Build the outputs to be evaluated
-    :param image_id: int, the id of the current image
-    :param person_to_joint_assoc: numpy array of joints associations
-    :param joint_list: list, list of joints
-    :param outputs: list of dictionaries with the following keys: image_id,
+    :param image_name: str, the filename of the current image
+    :param pods: list of pod
+    :param upsample_keypoints: tuple of keypoint position
+    :param outputs: list of dictionaries with the following keys: image_name,
                     category_id, keypoints, score
     """
     for pod in pods:
-        one_result = {
-            "image_name": '',
-            "category_id": 1,
-            "keypoints": [],
-            "score": 0
-        }
-        one_result["image_name"] = image_name
+        one_result = {"image_name": image_name,
+                      "category_id": 1,
+                      "keypoints": [],
+                      "score": 0}
         keypoints = np.zeros((5, 3))
 
         all_scores = []
@@ -159,14 +158,15 @@ def append_result(image_name, pods, upsample_keypoints, outputs):
                 score = pod.body_parts[i].score
                 all_scores.append(score)
 
-        # Use mean score of beans as the score of pod ?
-        one_result["score"] = np.mean(all_scores)
+        one_result["score"] = pod.score
         one_result["keypoints"] = list(keypoints.reshape(15))
         outputs.append(one_result)
 
 
 def run_eval(image_dir, vis_dir, model, preprocess):
     """Run the evaluation on the test set and report mAP score
+    :param image_dir: the directory containing images
+    :param vis_dir: directory to store output images
     :param model: the model to test
     :returns: float, the reported mAP score
     """
@@ -195,13 +195,10 @@ def run_eval(image_dir, vis_dir, model, preprocess):
 
         # Get results of original image
         paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess)
-        print('paf:', paf.shape)
-        print('heatmap:', heatmap.shape)
         pods = paf_to_pods_cpp(heatmap, paf, cfg)
         print('pods:', pods)
 
-
-        # subset indicated how many peoples found in this image.
+        # subset indicated how many pods found in this image.
         upsample_keypoints = (
         heatmap.shape[0] * cfg.MODEL.DOWNSAMPLE / scale_img, heatmap.shape[1] * cfg.MODEL.DOWNSAMPLE / scale_img)
         append_result(os.path.basename(img_paths[i]), pods, upsample_keypoints, outputs)

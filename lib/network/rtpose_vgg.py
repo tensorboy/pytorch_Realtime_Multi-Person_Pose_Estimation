@@ -57,7 +57,7 @@ def make_vgg19_block(block):
     return nn.Sequential(*layers)
 
 
-def get_model(trunk='vgg19', dataset='coco'):
+def get_model(trunk='vgg19'):
     """Creates the whole CPM model
     Args:
         dataset: string, 'coco' or 'bean'
@@ -65,13 +65,10 @@ def get_model(trunk='vgg19', dataset='coco'):
     Returns: Module, the defined model
     """
     blocks = {}
-    assert dataset == 'coco' or dataset == 'bean'
-    if dataset == 'coco':
-        S_out_shape = 19
-        L_out_shape = 38
-    elif dataset == 'bean':
-        S_out_shape = 6
-        L_out_shape = 8
+
+
+    S_out_shape = 6
+    L_out_shape = 8
 
     # block0 is the preprocessing stage
     if trunk == 'vgg19':

@@ -114,9 +114,6 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
         # img.show()
         peak_coords = find_peaks(config.TEST.THRESH_HEATMAP, map_orig)
         print('len:', peak_coords.shape)
-        # print('peak_coords', peak_coords)
-        # print('len(peak_coords):', len(peak_coords))
-        # print('peak_coords:\n', peak_coords)
         peaks = np.zeros((len(peak_coords), 4))
         for i, peak in enumerate(peak_coords):
             if bool_refine_center:
@@ -161,8 +158,59 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
     return joint_list_per_joint_type
 
 
-def find_connected_joints(paf_upsamp, joint_list_per_joint_type, num_intermed_pts=10, config=None):
+
+def paf_to_pods_cpp(heatmaps, pafs, config):
     """
+    :param heatmaps: numpy array for heatmaps
+    :param pafs: numpy array for pafs
+    :param config: configuration
+    :return : list of pod objects
+    """
+    pods = []
+    bean_list_per_bean_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)
+
+    bean_list = np.array(
+        [tuple(peak) + (bean_type,) for bean_type, bean_peaks in enumerate(bean_list_per_bean_type) for peak in
+         bean_peaks]).astype(np.float32)  # bean_list.shape: (xxx, 5)
+    # 5 stands for [x_pos, y_pos, score, count_joints, joint_id]
+    print(f'total: {len(bean_list)} beans')
+    if bean_list.shape[0] > 0:
+        bean_list = np.expand_dims(bean_list, 0)  # bean_list.shape: (1, xxx, 5)
+        paf_upsamp = cv2.resize(
+            pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
+        heatmap_upsamp = cv2.resize(
+            heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
+        # print('heatmap_upsamp:', heatmap_upsamp.shape)      # (368, xxx, 6)
+        # print('paf_upsamp:', paf_upsamp.shape)              # (368, xxx, 8)
+        pafprocess.process_paf(bean_list, heatmap_upsamp, paf_upsamp)
+        print(f'total pods:{pafprocess.get_num_humans()}')
+        for pod_id in range(pafprocess.get_num_humans()):
+            pod = Pod([])
+            is_added = False
+            for part_idx in range(config.MODEL.NUM_KEYPOINTS):
+                c_idx = int(pafprocess.get_part_cid(pod_id, part_idx))  # get unique idx of the part of the pod
+                if c_idx < 0:
+                    continue
+                is_added = True
+                pod.body_parts[part_idx] = PodPart(
+                    '%d-%d' % (pod_id, part_idx), part_idx,
+                    float(pafprocess.get_part_x(c_idx)) / heatmap_upsamp.shape[1],
+                    float(pafprocess.get_part_y(c_idx)) / heatmap_upsamp.shape[0],
+                    pafprocess.get_part_score(c_idx)
+                )
+            if is_added:
+                score = pafprocess.get_score(pod_id)
+                pod.score = score
+                pods.append(pod)
+
+    return pods
+
+
+
+
+def find_connected_joints(paf_upsamp, joint_list_per_joint_type, num_intermed_pts=10, config=None):
+    """ NOTE: No usages
+
     For every type of limb (eg: forearm, shin, etc.), look for every potential
     pair of joints (eg: every wrist-elbow combination) and evaluate the PAFs to
     determine which pairs are indeed body limbs.
@@ -273,7 +321,8 @@ def find_connected_joints(paf_upsamp, joint_list_per_joint_type, num_intermed_pt
 
 
 def group_limbs_of_same_person(connected_limbs, joint_list, config):
-    """
+    """ NOTE: No usages
+
     Associate limbs belonging to the same person together.
     :param connected_limbs: See 'return' doc of find_connected_joints()
     :param joint_list: unravel'd version of joint_list_per_joint [See 'return' doc of NMS()]
@@ -358,45 +407,3 @@ def group_limbs_of_same_person(connected_limbs, joint_list, config):
     # only convert to np.array at the end
     return np.array(person_to_joint_assoc)
 
-
-def paf_to_pods_cpp(heatmaps, pafs, config):
-    pods = []
-    # print('downsample:', config.MODEL.DOWNSAMPLE)
-
-    bean_list_per_bean_type = NMS(heatmaps, upsampFactor=config.MODEL.DOWNSAMPLE, config=config)
-
-    bean_list = np.array(
-        [tuple(peak) + (bean_type,) for bean_type, bean_peaks in enumerate(bean_list_per_bean_type) for peak in
-         bean_peaks]).astype(np.float32)  # bean_list.shape: (xxx, 5)
-    # 5 stands for [x_pos, y_pos, score, count_joints, joint_id]
-    print(f'total: {len(bean_list)} beans')
-    if bean_list.shape[0] > 0:
-        bean_list = np.expand_dims(bean_list, 0)  # bean_list.shape: (1, xxx, 5)
-        paf_upsamp = cv2.resize(
-            pafs, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
-        heatmap_upsamp = cv2.resize(
-            heatmaps, None, fx=config.MODEL.DOWNSAMPLE, fy=config.MODEL.DOWNSAMPLE, interpolation=cv2.INTER_NEAREST)
-        # print('heatmap_upsamp:', heatmap_upsamp.shape)      # (368, xxx, 6)
-        # print('paf_upsamp:', paf_upsamp.shape)              # (368, xxx, 8)
-        pafprocess.process_paf(bean_list, heatmap_upsamp, paf_upsamp)
-        print(f'total pods:{pafprocess.get_num_humans()}')
-        for pod_id in range(pafprocess.get_num_humans()):
-            pod = Pod([])
-            is_added = False
-            for part_idx in range(config.MODEL.NUM_KEYPOINTS):
-                c_idx = int(pafprocess.get_part_cid(pod_id, part_idx))  # get unique idx of the part of the pod
-                if c_idx < 0:
-                    continue
-                is_added = True
-                pod.body_parts[part_idx] = PodPart(
-                    '%d-%d' % (pod_id, part_idx), part_idx,
-                    float(pafprocess.get_part_x(c_idx)) / heatmap_upsamp.shape[1],
-                    float(pafprocess.get_part_y(c_idx)) / heatmap_upsamp.shape[0],
-                    pafprocess.get_part_score(c_idx)
-                )
-            if is_added:
-                score = pafprocess.get_score(pod_id)
-                pod.score = score
-                pods.append(pod)
-
-    return pods

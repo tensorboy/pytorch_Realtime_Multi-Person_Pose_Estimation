@@ -10,32 +10,20 @@ from lib.network.openpose import OpenPose_Model
 
 SOURCE_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-NOW_WHAT = 'bean'
 NEW_OPENPOSE = False
 
 parser = argparse.ArgumentParser()
 
 args = parser.parse_args()
 
-if NOW_WHAT == 'coco':
-    parser.add_argument('--cfg', help='experiment configure file name',
-                        default='./experiments/vgg19_368x368_sgd.yaml', type=str)
-    args = parser.parse_args()
-    update_config(cfg, args)
-    weight_path = 'network/weight/4.8/best_pose.pth'
-    image_dir = 'data/coco/images/val2017'
-    anno_file = 'data/coco/annotations/person_keypoints_val2017.json'
-    vis_dir = 'data/coco/images/vis_val2017'
-
-elif NOW_WHAT == 'bean':
-    parser.add_argument('--cfg', help='experiment configure file name',
-                        default=os.path.join(SOURCE_DIR, 'experiments/vgg19_368x368_sgd_bean.yaml'), type=str)
-    args = parser.parse_args()
-    update_config(cfg, args)
-    weight_path = os.path.join(SOURCE_DIR, cfg.MODEL.TRAINED)
-    image_dir = os.path.join(SOURCE_DIR, cfg.DATASET.TEST_IMAGE_DIR)
-    vis_dir = os.path.join(SOURCE_DIR, cfg.OUTPUT_DIR)
-    anno_file = None
+parser.add_argument('--cfg', help='experiment configure file name',
+                    default=os.path.join(SOURCE_DIR, 'experiments/vgg19_368x368_sgd_bean.yaml'), type=str)
+args = parser.parse_args()
+update_config(cfg, args)
+weight_path = os.path.join(SOURCE_DIR, cfg.MODEL.TRAINED)
+image_dir = os.path.join(SOURCE_DIR, cfg.DATASET.TEST_IMAGE_DIR)
+vis_dir = os.path.join(SOURCE_DIR, cfg.OUTPUT_DIR)
+anno_file = None
 
 # update config file
 update_config(cfg, args)
@@ -49,7 +37,7 @@ with torch.autograd.no_grad():
         wts_dict = torch.load(weight_path)
 
     else:
-        model = get_model(trunk='vgg19', dataset=NOW_WHAT)
+        model = get_model(trunk='vgg19')
         model = torch.nn.DataParallel(model).cuda()
         wts_dict = torch.load(weight_path)
         # wts_dict = {k.replace('module.', ''): v for k, v in wts_dict.items()}
@@ -59,11 +47,7 @@ with torch.autograd.no_grad():
     model.float()
     model = model.cuda()
 
-    # The choice of image preprocessing include: 'rtpose', 'inception', 'vgg19' and 'ssd'.
-    # If you use the converted model from caffe, it is 'rtpose' preprocess, the model trained in
-    # this repo used 'vgg19' preprocess
-    if NOW_WHAT == 'coco':
-        avg_precision = coco_eval.run_eval(image_dir=image_dir, anno_file=anno_file, vis_dir=vis_dir, model=model, preprocess='vgg19')
-        print("Average precision:", avg_precision)
-    elif NOW_WHAT == 'bean':
-        bean_eval.run_eval(image_dir=image_dir, model=model, vis_dir=vis_dir, preprocess='vgg19')
+# The choice of image preprocessing include: 'rtpose', 'inception', 'vgg19' and 'ssd'.
+# If you use the converted model from caffe, it is 'rtpose' preprocess, the model trained in
+# this repo used 'vgg19' preprocess
+bean_eval.run_eval(image_dir=image_dir, model=model, vis_dir=vis_dir, preprocess='vgg19')
