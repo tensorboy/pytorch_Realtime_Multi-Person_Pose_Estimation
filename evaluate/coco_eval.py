@@ -19,6 +19,21 @@ from lib.utils.common import Human, BodyPart, CocoPart, CocoColors, CocoPairsRen
 from lib.utils.paf_to_pose import paf_to_pose_cpp
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--cfg', help='experiment configure file name',
+                    default='./experiments/vgg19_368x368_sgd.yaml', type=str)
+parser.add_argument('--weight', type=str,
+                    default='../ckpts/openpose.pth')
+parser.add_argument('opts',
+                    help="Modify config options using the command-line",
+                    default=None,
+                    nargs=argparse.REMAINDER)
+args = parser.parse_args()
+
+# update config file
+update_config(cfg, args)
+
+
 '''
 MS COCO annotation order:
 0: nose	   		1: l eye		2: r eye	3: l ear	4: r ear
@@ -62,7 +77,7 @@ def eval_coco(outputs, annFile, imgIds):
 
 
 
-def get_outputs(img, model, preprocess, new_openpose_model=False):
+def get_outputs(img, model, preprocess):
     """Computes the averaged heatmap and paf for the given image
     :param multiplier:
     :param origImg: numpy array, the image being processed
@@ -70,7 +85,6 @@ def get_outputs(img, model, preprocess, new_openpose_model=False):
     :returns: numpy arrays, the averaged paf and heatmap
     """
     inp_size = cfg.DATASET.IMAGE_SIZE
-    assert preprocess in ['rtpose', 'vgg19', 'inception', 'ssd']
 
     # padding
     im_croped, im_scale, real_shape = im_transform.crop_with_factor(
@@ -79,7 +93,7 @@ def get_outputs(img, model, preprocess, new_openpose_model=False):
     if preprocess == 'rtpose':
         im_data = rtpose_preprocess(im_croped)
 
-    elif preprocess == 'vgg19':
+    elif preprocess == 'vgg':
         im_data = vgg_preprocess(im_croped)
 
     elif preprocess == 'inception':
@@ -88,22 +102,14 @@ def get_outputs(img, model, preprocess, new_openpose_model=False):
     elif preprocess == 'ssd':
         im_data = ssd_preprocess(im_croped)
 
-    batch_images = np.expand_dims(im_data, 0)
+    batch_images= np.expand_dims(im_data, 0)
 
     # several scales as a batch
     batch_var = torch.from_numpy(batch_images).cuda().float()
     predicted_outputs, _ = model(batch_var)
     output1, output2 = predicted_outputs[-2], predicted_outputs[-1]
-
-    if new_openpose_model:
-        # for new openpose model
-        heatmap = output2[1].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-        paf = output2[0].cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-
-    else:
-        # for vgg19 rtpose model
-        heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
-        paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+    heatmap = output2.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
+    paf = output1.cpu().data.numpy().transpose(0, 2, 3, 1)[0]
 
     return paf, heatmap, im_scale
 
@@ -256,26 +262,22 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
         file_name = img['file_name']
         file_path = os.path.join(image_dir, file_name)
 
-        oriImg = cv2.imread(file_path)          # read image stored at local location
+        oriImg = cv2.imread(file_path)
         # Get the shortest side of the image (either height or width)
         shape_dst = np.min(oriImg.shape[0:2])
 
         # Get results of original image
-        paf, heatmap, scale_img = get_outputs(oriImg, model, preprocess, new_openpose_model=False)
-        print('file_name:', file_name)
-        # print('heatmap:', heatmap.shape)  # (xx, xx, 19) with 46 for either height or width
-        # print('paf:', paf.shape)     # (xx, xx, 38) with 46 for either height or width
+        paf, heatmap, scale_img = get_outputs(oriImg, model,  preprocess)
+
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
                 
         out = draw_humans(oriImg, humans)
-
-        if not os.path.exists(vis_dir):
-            os.makedirs(vis_dir)
+            
         vis_path = os.path.join(vis_dir, file_name)
         cv2.imwrite(vis_path, out)
         # subset indicated how many peoples foun in this image.
         upsample_keypoints = (heatmap.shape[0]*cfg.MODEL.DOWNSAMPLE/scale_img, heatmap.shape[1]*cfg.MODEL.DOWNSAMPLE/scale_img)
         append_result(img_ids[i], humans, upsample_keypoints, outputs)
 
-    # Eval and show the final result! (on the coco val set)
+    # Eval and show the final result!
     return eval_coco(outputs=outputs, annFile=anno_file, imgIds=img_ids)

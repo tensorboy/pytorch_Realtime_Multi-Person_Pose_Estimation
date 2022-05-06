@@ -20,17 +20,16 @@ def putVecMaps(centerA, centerB, accumulate_vec_map, count, grid_y, grid_x, stri
     centerB = centerB.astype(float)
 
     thre = 1  # limb width
-
     centerB = centerB / stride
     centerA = centerA / stride
 
     limb_vec = centerB - centerA
     norm = np.linalg.norm(limb_vec)
     if (norm == 0.0):
-        print('limb is too short, ignore it...')
+        # print 'limb is too short, ignore it...'
         return accumulate_vec_map, count
     limb_vec_unit = limb_vec / norm
-    # print('limb unit vector: {}'.format(limb_vec_unit))
+    # print 'limb unit vector: {}'.format(limb_vec_unit)
 
     # To make sure not beyond the border of this two points
     min_x = max(int(round(min(centerA[0], centerB[0]) - thre)), 0)
@@ -59,11 +58,11 @@ def putVecMaps(centerA, centerB, accumulate_vec_map, count, grid_y, grid_x, stri
     accumulate_vec_map += vec_map
     count[mask == True] += 1
 
-    mask = count == 0  # correspond to coords with neither mask nor count
+    mask = count == 0
 
-    count[mask == True] = 1  # to avoid dividing by 0
+    count[mask == True] = 1
 
     accumulate_vec_map = np.divide(accumulate_vec_map, count[:, :, np.newaxis])
-    count[mask == True] = 0  # after division, reset these coords to 0
+    count[mask == True] = 0
 
     return accumulate_vec_map, count
