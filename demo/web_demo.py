@@ -15,8 +15,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from collections import OrderedDict
-from scipy.ndimage.morphology import generate_binary_structure
-from scipy.ndimage.filters import gaussian_filter, maximum_filter
+from scipy.ndimage import generate_binary_structure
+from scipy.ndimage import gaussian_filter, maximum_filter
 
 from lib.network.rtpose_vgg import get_model
 from lib.network import im_transform
