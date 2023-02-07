@@ -40,7 +40,7 @@ args = parser.parse_args()
 # update config file
 update_config(cfg, args)   
 
-model = get_model('vgg19')     
+model = get_model('vgg19')
 model.load_state_dict(torch.load(args.weight))
 model.cuda()
 model.float()
@@ -53,15 +53,15 @@ if __name__ == "__main__":
     while True:
         # Capture frame-by-frame
         ret, oriImg = video_capture.read()
-        
-        shape_dst = np.min(oriImg.shape[0:2])
+
+        shape_dst = np.min(oriImg.shape[:2])
 
         with torch.no_grad():
             paf, heatmap, imscale = get_outputs(
                 oriImg, model, 'rtpose')
-                  
+
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
-                
+
         out = draw_humans(oriImg, humans)
 
         # Display the resulting frame

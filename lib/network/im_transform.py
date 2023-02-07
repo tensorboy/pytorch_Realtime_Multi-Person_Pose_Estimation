@@ -5,7 +5,7 @@ import cv2
 def resize(frame, desired_size):
     old_size = frame.shape[:2]
     ratio = float(desired_size) / max(old_size)
-    new_size = tuple([int(x*ratio) for x in old_size])
+    new_size = tuple(int(x*ratio) for x in old_size)
 
     frame = cv2.resize(frame, (new_size[1], new_size[0]))
     delta_w = desired_size - new_size[1]
@@ -89,21 +89,21 @@ def offset_boxes(boxes, scale, offs, flip, im_shape):
     boxes[:, 0::2] -= offs[0]
     boxes[:, 1::2] -= offs[1]
 
-    is_box = boxes.shape[-1] % 4 == 0
     # if is_box:
     #     boxes = clip_boxes(boxes, im_shape)
 
     if flip:
         boxes[:, 0::2] = im_shape[1] - boxes[:, 0::2]
+        is_box = boxes.shape[-1] % 4 == 0
         if is_box:
             for i in range(boxes.shape[-1] // 4):
                 tmp = boxes[:, i].copy()
                 boxes[:, i] = boxes[:, i + 2]
                 boxes[:, i + 2] = tmp
 
-        # boxes_x = np.copy(boxes[:, 0])
-        # boxes[:, 0] = im_shape[1] - boxes[:, 2]
-        # boxes[:, 2] = im_shape[1] - boxes_x
+            # boxes_x = np.copy(boxes[:, 0])
+            # boxes[:, 0] = im_shape[1] - boxes[:, 2]
+            # boxes[:, 2] = im_shape[1] - boxes_x
 
     if expand:
         boxes = boxes[0]
@@ -118,8 +118,8 @@ def _factor_closest(num, factor, is_ceil=True):
 
 def crop_with_factor(im, dest_size=None, factor=32, is_ceil=True):
     im_shape = im.shape
-    im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])
+    im_size_min = np.min(im_shape[:2])
+    im_size_max = np.max(im_shape[:2])
     # im_scale = 1.
     # if max_size is not None and im_size_min > max_size:
     im_scale = float(dest_size) / im_size_min

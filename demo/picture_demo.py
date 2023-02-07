@@ -42,7 +42,7 @@ update_config(cfg, args)
 
 
 
-model = get_model('vgg19')     
+model = get_model('vgg19')
 model.load_state_dict(torch.load(args.weight))
 model = torch.nn.DataParallel(model).cuda()
 model.float()
@@ -50,16 +50,16 @@ model.eval()
 
 test_image = './readme/ski.jpg'
 oriImg = cv2.imread(test_image) # B,G,R order
-shape_dst = np.min(oriImg.shape[0:2])
+shape_dst = np.min(oriImg.shape[:2])
 
 # Get results of original image
 
 with torch.no_grad():
     paf, heatmap, im_scale = get_outputs(oriImg, model,  'rtpose')
-          
+
 print(im_scale)
 humans = paf_to_pose_cpp(heatmap, paf, cfg)
-        
+
 out = draw_humans(oriImg, humans)
 cv2.imwrite('result.png',out)   
 

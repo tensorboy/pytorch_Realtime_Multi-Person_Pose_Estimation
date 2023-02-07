@@ -59,7 +59,7 @@ args = parser.parse_args()
 # update config file
 update_config(cfg, args)   
 
-model = get_model('vgg19')     
+model = get_model('vgg19')
 model.load_state_dict(torch.load(args.weight))
 model.cuda()
 model.float()
@@ -73,14 +73,14 @@ if __name__ == "__main__":
     print("Shape of image is ",shape_tuple)
     rotate_code = check_rotation(video_path)
     video_capture_dummy.release()
-    
+
     video_capture = cv2.VideoCapture(video_path)
-    
+
     ##New stuff
-    fourcc = cv2.VideoWriter_fourcc(*'XVID') 
-    vid_out = cv2.VideoWriter('output.avi', fourcc, 20.0, shape_tuple) 
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    vid_out = cv2.VideoWriter('output.avi', fourcc, 20.0, shape_tuple)
     ###
-    
+
     proc_frame_list = []
     oriImg_list = []
     while True:
@@ -90,9 +90,9 @@ if __name__ == "__main__":
             if rotate_code is not None:
                 oriImg = correct_rotation(oriImg, rotate_code)
             oriImg_list.append(oriImg)
-            
+
             cv2.imshow('Video', oriImg)
-            
+
     #        vid_out.write(out)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -102,26 +102,26 @@ if __name__ == "__main__":
     cv2.destroyAllWindows()
 
     print("Number of frames",len(oriImg_list))
-    
+
     count = 0
     for oriImg in oriImg_list:
         count+=1
         if count%50 == 0:
             print(count, "frames processed")
-        
+
         try:
-            shape_dst = np.min(oriImg.shape[0:2])
+            shape_dst = np.min(oriImg.shape[:2])
             print(oriImg.shape)
         except:
             break
         with torch.no_grad():
                 paf, heatmap, imscale = get_outputs(
                     oriImg, model, 'rtpose')
-                      
+
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
-                    
+
         out = draw_humans(oriImg, humans)
-   
+
         vid_out.write(out)
     
     # When everything is done, release the capture

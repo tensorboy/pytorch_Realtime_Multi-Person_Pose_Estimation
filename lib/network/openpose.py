@@ -31,8 +31,8 @@ def make_vgg19_block():
             {'conv4_3_CPM': [512, 256, 3, 1, 1]},
             {'conv4_4_CPM': [256, 128, 3, 1, 1]}]
     layers = []
-    for i in range(len(block)):
-        one_ = block[i]
+    for item in block:
+        one_ = item
         for k, v in one_.items():
             if 'pool' in k:
                 layers += [nn.MaxPool2d(kernel_size=v[0], stride=v[1],
@@ -105,8 +105,7 @@ class StageBlock(nn.Module):
         out3_5 = self.Mconv5_2(out2_5)
         x_cat_5 = torch.cat([out1_5, out2_5, out3_5], 1)
         out_6 = self.Mconv6(x_cat_5)
-        stage_output = self.Mconv7(out_6)
-        return stage_output
+        return self.Mconv7(out_6)
 
 class OpenPose_Model(nn.Module):
     def __init__(self, l2_stages=4, l1_stages=2,
@@ -158,7 +157,6 @@ class OpenPose_Model(nn.Module):
         self._initialize_weights_norm()
 
     def forward(self, x):
-        saved_for_loss = []
         features = self.feature_extractor(x)
         paf_ret, heat_ret = [], []
         x_in = features
@@ -172,8 +170,7 @@ class OpenPose_Model(nn.Module):
             heat_pred = l1_stage(x_in)
             x_in = torch.cat([features, heat_pred, paf_pred], 1)
             heat_ret.append(heat_pred)
-        saved_for_loss.append(paf_ret)
-        saved_for_loss.append(heat_ret)
+        saved_for_loss = [paf_ret, heat_ret]
         return [(paf_ret[-2], heat_ret[-2]), (paf_ret[-1], heat_ret[-1])], saved_for_loss
 
     def _initialize_weights_norm(self):
@@ -215,13 +212,10 @@ def use_vgg(model):
     vgg_state_dict = model_zoo.load_url(url)
     vgg_keys = vgg_state_dict.keys()
 
-    # load weights of vgg
-    weights_load = {}
-    # weight+bias,weight+bias.....(repeat 10 times)
-    for i in range(20):
-        weights_load[list(model.state_dict().keys())[i]
-                     ] = vgg_state_dict[list(vgg_keys)[i]]
-
+    weights_load = {
+        list(model.state_dict().keys())[i]: vgg_state_dict[list(vgg_keys)[i]]
+        for i in range(20)
+    }
     state = model.state_dict()
     state.update(weights_load)
     model.load_state_dict(state)

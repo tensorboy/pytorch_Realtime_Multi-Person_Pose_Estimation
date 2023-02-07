@@ -37,8 +37,8 @@ def putVecMaps(centerA, centerB, accumulate_vec_map, count, grid_y, grid_x, stri
     min_y = max(int(round(min(centerA[1], centerB[1]) - thre)), 0)
     max_y = min(int(round(max(centerA[1], centerB[1]) + thre)), grid_y)
 
-    range_x = list(range(int(min_x), int(max_x), 1))
-    range_y = list(range(int(min_y), int(max_y), 1))
+    range_x = list(range(int(min_x), int(max_x)))
+    range_y = list(range(int(min_y), int(max_y)))
     xx, yy = np.meshgrid(range_x, range_y)
     ba_x = xx - centerA[0]  # the vector from (x,y) to centerA
     ba_y = yy - centerA[1]
@@ -60,9 +60,9 @@ def putVecMaps(centerA, centerB, accumulate_vec_map, count, grid_y, grid_x, stri
 
     mask = count == 0
 
-    count[mask == True] = 1
+    count[mask] = 1
 
     accumulate_vec_map = np.divide(accumulate_vec_map, count[:, :, np.newaxis])
-    count[mask == True] = 0
+    count[mask] = 0
 
     return accumulate_vec_map, count

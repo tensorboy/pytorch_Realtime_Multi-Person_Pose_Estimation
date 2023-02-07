@@ -20,8 +20,8 @@ from scipy import misc, ndimage
 def putGaussianMaps(center, accumulate_confid_map, sigma, grid_y, grid_x, stride):
 
     start = stride / 2.0 - 0.5
-    y_range = [i for i in range(int(grid_y))]
-    x_range = [i for i in range(int(grid_x))]
+    y_range = list(range(int(grid_y)))
+    x_range = list(range(int(grid_x)))
     xx, yy = np.meshgrid(x_range, y_range)
     xx = xx * stride + start
     yy = yy * stride + start
@@ -32,5 +32,5 @@ def putGaussianMaps(center, accumulate_confid_map, sigma, grid_y, grid_x, stride
     cofid_map = np.multiply(mask, cofid_map)
     accumulate_confid_map += cofid_map
     accumulate_confid_map[accumulate_confid_map > 1.0] = 1.0
-    
+
     return accumulate_confid_map

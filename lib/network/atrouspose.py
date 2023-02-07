@@ -44,9 +44,7 @@ class ASPP_ASP(nn.Module):
         add2 = add1+out_3x3_1
         add3 = add2+out_3x3_2
         add4 = add3+out_3x3_3
-        out = F.relu(self.bn_out(torch.cat([add1, add2, add3, add4], 1))) # (shape: (batch_size, 1280, h/16, w/16))
-
-        return out
+        return F.relu(self.bn_out(torch.cat([add1, add2, add3, add4], 1)))
         
 
 def conv_dw(in_channels, out_channels, kernel_size=3, padding=1, stride=1, dilation=1):
@@ -98,8 +96,7 @@ class AtrousPose(nn.Module):
         )
 
     def _lateral(self, input_size, factor):
-        layers = []
-        layers.append(nn.Conv2d(input_size, 256, kernel_size=1, stride=1, bias=False))
+        layers = [nn.Conv2d(input_size, 256, kernel_size=1, stride=1, bias=False)]
         layers.append(nn.BatchNorm2d(256))
         layers.append(nn.ReLU(inplace=True))
         layers.append(Upsample(scale_factor=factor, mode='bilinear'))
@@ -141,7 +138,7 @@ if __name__ == "__main__":
     image = torch.from_numpy(image).type(torch.FloatTensor).permute(2, 0, 1).reshape(1, 3, 256, 256).cuda()
     print(net)
     model_info(net)
-    for i in range(30):
+    for _ in range(30):
         vec1, heat1 = net(image)
 
     print(vec1.shape, heat1.shape)
