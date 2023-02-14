@@ -10,8 +10,7 @@ def horizontal_swap_coco(keypoints):
 
     for source_i, xyv in enumerate(keypoints):
         source_name = COCO_KEYPOINTS[source_i]
-        target_name = HFLIP.get(source_name)
-        if target_name:
+        if target_name := HFLIP.get(source_name):
             target_i = COCO_KEYPOINTS.index(target_name)
         else:
             target_i = source_i
@@ -26,11 +25,13 @@ def create_sink(side):
         return np.zeros((2, 1, 1))
 
     sink1d = np.linspace((side - 1.0) / 2.0, -(side - 1.0) / 2.0, num=side, dtype=np.float32)
-    sink = np.stack((
-        sink1d.reshape(1, -1).repeat(side, axis=0),
-        sink1d.reshape(-1, 1).repeat(side, axis=1),
-    ), axis=0)
-    return sink
+    return np.stack(
+        (
+            sink1d.reshape(1, -1).repeat(side, axis=0),
+            sink1d.reshape(-1, 1).repeat(side, axis=1),
+        ),
+        axis=0,
+    )
 
 
 def mask_valid_area(intensities, valid_area):

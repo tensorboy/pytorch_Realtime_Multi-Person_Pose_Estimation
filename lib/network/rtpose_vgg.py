@@ -63,9 +63,17 @@ def get_model(trunk='vgg19'):
         trunk: string, 'vgg19' or 'mobilenet'
     Returns: Module, the defined model
     """
-    blocks = {}
     # block0 is the preprocessing stage
-    if trunk == 'vgg19':
+    if trunk == 'mobilenet':
+        block0 = [{'conv_bn': [3, 32, 2]},  # out: 3, 32, 184, 184
+                  {'conv_dw1': [32, 64, 1]},  # out: 32, 64, 184, 184
+                  {'conv_dw2': [64, 128, 2]},  # out: 64, 128, 92, 92
+                  {'conv_dw3': [128, 128, 1]},  # out: 128, 256, 92, 92
+                  {'conv_dw4': [128, 256, 2]},  # out: 256, 256, 46, 46
+                  {'conv4_3_CPM': [256, 256, 1, 3, 1]},
+                  {'conv4_4_CPM': [256, 128, 1, 3, 1]}]
+
+    elif trunk == 'vgg19':
         block0 = [{'conv1_1': [3, 64, 3, 1, 1]},
                   {'conv1_2': [64, 64, 3, 1, 1]},
                   {'pool1_stage1': [2, 2, 0]},
@@ -82,28 +90,22 @@ def get_model(trunk='vgg19'):
                   {'conv4_3_CPM': [512, 256, 3, 1, 1]},
                   {'conv4_4_CPM': [256, 128, 3, 1, 1]}]
 
-    elif trunk == 'mobilenet':
-        block0 = [{'conv_bn': [3, 32, 2]},  # out: 3, 32, 184, 184
-                  {'conv_dw1': [32, 64, 1]},  # out: 32, 64, 184, 184
-                  {'conv_dw2': [64, 128, 2]},  # out: 64, 128, 92, 92
-                  {'conv_dw3': [128, 128, 1]},  # out: 128, 256, 92, 92
-                  {'conv_dw4': [128, 256, 2]},  # out: 256, 256, 46, 46
-                  {'conv4_3_CPM': [256, 256, 1, 3, 1]},
-                  {'conv4_4_CPM': [256, 128, 1, 3, 1]}]
-
-    # Stage 1
-    blocks['block1_1'] = [{'conv5_1_CPM_L1': [128, 128, 3, 1, 1]},
-                          {'conv5_2_CPM_L1': [128, 128, 3, 1, 1]},
-                          {'conv5_3_CPM_L1': [128, 128, 3, 1, 1]},
-                          {'conv5_4_CPM_L1': [128, 512, 1, 1, 0]},
-                          {'conv5_5_CPM_L1': [512, 38, 1, 1, 0]}]
-
-    blocks['block1_2'] = [{'conv5_1_CPM_L2': [128, 128, 3, 1, 1]},
-                          {'conv5_2_CPM_L2': [128, 128, 3, 1, 1]},
-                          {'conv5_3_CPM_L2': [128, 128, 3, 1, 1]},
-                          {'conv5_4_CPM_L2': [128, 512, 1, 1, 0]},
-                          {'conv5_5_CPM_L2': [512, 19, 1, 1, 0]}]
-
+    blocks = {
+        'block1_1': [
+            {'conv5_1_CPM_L1': [128, 128, 3, 1, 1]},
+            {'conv5_2_CPM_L1': [128, 128, 3, 1, 1]},
+            {'conv5_3_CPM_L1': [128, 128, 3, 1, 1]},
+            {'conv5_4_CPM_L1': [128, 512, 1, 1, 0]},
+            {'conv5_5_CPM_L1': [512, 38, 1, 1, 0]},
+        ],
+        'block1_2': [
+            {'conv5_1_CPM_L2': [128, 128, 3, 1, 1]},
+            {'conv5_2_CPM_L2': [128, 128, 3, 1, 1]},
+            {'conv5_3_CPM_L2': [128, 128, 3, 1, 1]},
+            {'conv5_4_CPM_L2': [128, 512, 1, 1, 0]},
+            {'conv5_5_CPM_L2': [512, 19, 1, 1, 0]},
+        ],
+    }
     # Stages 2 - 6
     for i in range(2, 7):
         blocks['block%d_1' % i] = [
@@ -135,6 +137,8 @@ def get_model(trunk='vgg19'):
     for k, v in blocks.items():
         models[k] = make_stages(list(v))
 
+
+
     class rtpose_model(nn.Module):
         def __init__(self, model_dict):
             super(rtpose_model, self).__init__()
@@ -157,44 +161,31 @@ def get_model(trunk='vgg19'):
 
         def forward(self, x):
 
-            saved_for_loss = []
             out1 = self.model0(x)
 
             out1_1 = self.model1_1(out1)
             out1_2 = self.model1_2(out1)
             out2 = torch.cat([out1_1, out1_2, out1], 1)
-            saved_for_loss.append(out1_1)
-            saved_for_loss.append(out1_2)
-
+            saved_for_loss = [out1_1, out1_2]
             out2_1 = self.model2_1(out2)
             out2_2 = self.model2_2(out2)
             out3 = torch.cat([out2_1, out2_2, out1], 1)
-            saved_for_loss.append(out2_1)
-            saved_for_loss.append(out2_2)
-
+            saved_for_loss.extend((out2_1, out2_2))
             out3_1 = self.model3_1(out3)
             out3_2 = self.model3_2(out3)
             out4 = torch.cat([out3_1, out3_2, out1], 1)
-            saved_for_loss.append(out3_1)
-            saved_for_loss.append(out3_2)
-
+            saved_for_loss.extend((out3_1, out3_2))
             out4_1 = self.model4_1(out4)
             out4_2 = self.model4_2(out4)
             out5 = torch.cat([out4_1, out4_2, out1], 1)
-            saved_for_loss.append(out4_1)
-            saved_for_loss.append(out4_2)
-
+            saved_for_loss.extend((out4_1, out4_2))
             out5_1 = self.model5_1(out5)
             out5_2 = self.model5_2(out5)
             out6 = torch.cat([out5_1, out5_2, out1], 1)
-            saved_for_loss.append(out5_1)
-            saved_for_loss.append(out5_2)
-
+            saved_for_loss.extend((out5_1, out5_2))
             out6_1 = self.model6_1(out6)
             out6_2 = self.model6_2(out6)
-            saved_for_loss.append(out6_1)
-            saved_for_loss.append(out6_2)
-
+            saved_for_loss.extend((out6_1, out6_2))
             return (out6_1, out6_2), saved_for_loss
 
         def _initialize_weights_norm(self):
@@ -221,8 +212,8 @@ def get_model(trunk='vgg19'):
             init.normal_(self.model5_2[12].weight, std=0.01)
             init.normal_(self.model6_2[12].weight, std=0.01)
 
-    model = rtpose_model(models)
-    return model
+
+    return rtpose_model(models)
 
 
 """Load pretrained model on Imagenet
@@ -238,13 +229,10 @@ def use_vgg(model):
     vgg_state_dict = model_zoo.load_url(url)
     vgg_keys = vgg_state_dict.keys()
 
-    # load weights of vgg
-    weights_load = {}
-    # weight+bias,weight+bias.....(repeat 10 times)
-    for i in range(20):
-        weights_load[list(model.state_dict().keys())[i]
-                     ] = vgg_state_dict[list(vgg_keys)[i]]
-
+    weights_load = {
+        list(model.state_dict().keys())[i]: vgg_state_dict[list(vgg_keys)[i]]
+        for i in range(20)
+    }
     state = model.state_dict()
     state.update(weights_load)
     model.load_state_dict(state)

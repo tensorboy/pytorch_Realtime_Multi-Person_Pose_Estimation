@@ -137,8 +137,9 @@ def NMS(heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian_filt=F
                 # Flip peak coordinates since they are [x,y] instead of [y,x]
                 peak_score = map_orig[tuple(peak[::-1])]
             peaks[i, :] = tuple(
-                x for x in compute_resized_coords(peak_coords[i], upsampFactor) + refined_center[::-1]) + (
-                              peak_score, cnt_total_joints)
+                compute_resized_coords(peak_coords[i], upsampFactor)
+                + refined_center[::-1]
+            ) + (peak_score, cnt_total_joints)
             cnt_total_joints += 1
         joint_list_per_joint_type.append(peaks)
 
@@ -239,7 +240,7 @@ def find_connected_joints(paf_upsamp, joint_list_per_joint_type, num_intermed_pt
             max_connections = min(len(joints_src), len(joints_dst))
             # Traverse all potential joint connections (sorted by their score)
             for potential_connection in connection_candidates:
-                i, j, s = potential_connection[0:3]
+                i, j, s = potential_connection[:3]
                 # Make sure joints_src[i] or joints_dst[j] haven't already been
                 # connected to other joints_dst or joints_src
                 if i not in connections[:, 3] and j not in connections[:, 4]:
@@ -273,11 +274,12 @@ def group_limbs_of_same_person(connected_limbs, joint_list, config):
         joint_src_type, joint_dst_type = joint_to_limb_heatmap_relationship[limb_type]
 
         for limb_info in connected_limbs[limb_type]:
-            person_assoc_idx = []
-            for person, person_limbs in enumerate(person_to_joint_assoc):
-                if person_limbs[joint_src_type] == limb_info[0] or person_limbs[joint_dst_type] == limb_info[1]:
-                    person_assoc_idx.append(person)
-
+            person_assoc_idx = [
+                person
+                for person, person_limbs in enumerate(person_to_joint_assoc)
+                if person_limbs[joint_src_type] == limb_info[0]
+                or person_limbs[joint_dst_type] == limb_info[1]
+            ]
             # If one of the joints has been associated to a person, and either
             # the other joint is also associated with the same person or not
             # associated to anyone yet:
@@ -326,11 +328,11 @@ def group_limbs_of_same_person(connected_limbs, joint_list, config):
                               ) + limb_info[2]
                 person_to_joint_assoc.append(row)
 
-    # Delete people who have very few parts connected
-    people_to_delete = []
-    for person_id, person_info in enumerate(person_to_joint_assoc):
-        if person_info[-1] < 3 or person_info[-2] / person_info[-1] < 0.2:
-            people_to_delete.append(person_id)
+    people_to_delete = [
+        person_id
+        for person_id, person_info in enumerate(person_to_joint_assoc)
+        if person_info[-1] < 3 or person_info[-2] / person_info[-1] < 0.2
+    ]
     # Traverse the list in reverse order so we delete indices starting from the
     # last one (otherwise, removing item for example 0 would modify the indices of
     # the remaining people to be deleted!)

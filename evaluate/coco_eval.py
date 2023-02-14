@@ -124,14 +124,13 @@ def append_result(image_id, humans, upsample_keypoints, outputs):
     """ 
     for human in humans:
         one_result = {
-            "image_id": 0,
             "category_id": 1,
             "keypoints": [],
-            "score": 0
+            "score": 0,
+            "image_id": image_id,
         }
-        one_result["image_id"] = image_id
         keypoints = np.zeros((18, 3))       
-        
+
         all_scores = []
         for i in range(cfg.MODEL.NUM_KEYPOINTS):
             if i not in human.body_parts.keys():
@@ -146,7 +145,7 @@ def append_result(image_id, humans, upsample_keypoints, outputs):
                 keypoints[i, 2] = 1     
                 score = human.body_parts[i].score 
                 all_scores.append(score)
-                
+
         keypoints = keypoints[ORDER_COCO,:]
         one_result["score"] = 1.
         one_result["keypoints"] = list(keypoints.reshape(51))
@@ -165,20 +164,19 @@ def append_result_legacy(image_id, person_to_joint_assoc, joint_list, outputs):
 
     for ridxPred in range(len(person_to_joint_assoc)):
         one_result = {
-            "image_id": 0,
             "category_id": 1,
             "keypoints": [],
-            "score": 0
+            "score": 0,
+            "image_id": image_id,
         }
 
-        one_result["image_id"] = image_id
         keypoints = np.zeros((17, 3))
 
         for part in range(17):
             ind = ORDER_COCO[part]
             index = int(person_to_joint_assoc[ridxPred, ind])
 
-            if -1 == index:
+            if index == -1:
                 keypoints[part, 0] = 0
                 keypoints[part, 1] = 0
                 keypoints[part, 2] = 0
@@ -248,31 +246,31 @@ def run_eval(image_dir, anno_file, vis_dir, model, preprocess):
     :returns: float, the reported mAP score
     """   
     coco = COCO(anno_file)
-    cat_ids = coco.getCatIds(catNms=['person'])    
+    cat_ids = coco.getCatIds(catNms=['person'])
     img_ids = coco.getImgIds(catIds=cat_ids)
-    print("Total number of validation images {}".format(len(img_ids)))
+    print(f"Total number of validation images {len(img_ids)}")
 
     # iterate all val images
     outputs = []
     print("Processing Images in validation set")
     for i in range(len(img_ids)):
         if i % 10 == 0 and i != 0:
-            print("Processed {} images".format(i))
+            print(f"Processed {i} images")
         img = coco.loadImgs(img_ids[i])[0]
         file_name = img['file_name']
         file_path = os.path.join(image_dir, file_name)
 
         oriImg = cv2.imread(file_path)
         # Get the shortest side of the image (either height or width)
-        shape_dst = np.min(oriImg.shape[0:2])
+        shape_dst = np.min(oriImg.shape[:2])
 
         # Get results of original image
         paf, heatmap, scale_img = get_outputs(oriImg, model,  preprocess)
 
         humans = paf_to_pose_cpp(heatmap, paf, cfg)
-                
+
         out = draw_humans(oriImg, humans)
-            
+
         vis_path = os.path.join(vis_dir, file_name)
         cv2.imwrite(vis_path, out)
         # subset indicated how many peoples foun in this image.

@@ -16,18 +16,13 @@ import numpy as np
 def rtpose_preprocess(image):
     image = image.astype(np.float32)
     image = image / 256. - 0.5
-    image = image.transpose((2, 0, 1)).astype(np.float32)
-
-    return image
+    return image.transpose((2, 0, 1)).astype(np.float32)
 
 def inverse_rtpose_preprocess(image):
     image = image.astype(np.float32)
-    image = image.transpose((1, 2, 0)).astype(np.float32)    
-    image = (image + 0.5) * 256. 
-    image = image.astype(np.uint8)
-
-
-    return image
+    image = image.transpose((1, 2, 0)).astype(np.float32)
+    image = (image + 0.5) * 256.
+    return image.astype(np.uint8)
     
 def vgg_preprocess(image):
     image = image.astype(np.float32) / 255.
@@ -47,9 +42,7 @@ def inception_preprocess(image):
     image = image.copy()[:, :, ::-1]
     image = image.astype(np.float32)
     image = image / 128. - 1.
-    image = image.transpose((2, 0, 1)).astype(np.float32)
-
-    return image
+    return image.transpose((2, 0, 1)).astype(np.float32)
 
 def inverse_vgg_preprocess(image):
     means = [0.485, 0.456, 0.406]
@@ -70,9 +63,7 @@ def inverse_inception_preprocess(image):
     image = image.transpose((1, 2, 0)).astype(np.float32)
     image = image[:, :, ::-1]
     image = (image  + 1.)*128.
-    image = image.astype(np.uint8)
-    
-    return image
+    return image.astype(np.uint8)
     
 def ssd_preprocess(image):
     image = image.astype(np.float32)
@@ -93,9 +84,7 @@ def preprocess(image, mode):
         'inception': inception_preprocess,
         'ssd': ssd_preprocess
     }
-    if mode not in preprocessors:
-        return image
-    return preprocessors[mode](image)
+    return image if mode not in preprocessors else preprocessors[mode](image)
 
 
 def put_vec_maps(centerA, centerB, accumulate_vec_map, count, params_transform):
@@ -132,8 +121,8 @@ def put_vec_maps(centerA, centerB, accumulate_vec_map, count, params_transform):
     min_y = max(int(round(min(centerA[1], centerB[1]) - thre)), 0)
     max_y = min(int(round(max(centerA[1], centerB[1]) + thre)), grid_y)
 
-    range_x = list(range(int(min_x), int(max_x), 1))
-    range_y = list(range(int(min_y), int(max_y), 1))
+    range_x = list(range(int(min_x), int(max_x)))
+    range_y = list(range(int(min_y), int(max_y)))
     xx, yy = np.meshgrid(range_x, range_y)
     ba_x = xx - centerA[0]  # the vector from (x,y) to centerA
     ba_y = yy - centerA[1]

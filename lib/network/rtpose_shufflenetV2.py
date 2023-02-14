@@ -31,27 +31,48 @@ class BasicBlock(nn.Module):
         if not self.downsample and self.stride==1:
             assert in_channels == out_channels
             self.conv = nn.Sequential(
-                slim.conv_bn_relu(name + '/conv1', channels, channels, 1),
-                slim.conv_bn(name + '/conv2', 
-                    channels, channels, 3, stride=stride, 
-                    dilation=dilation, padding=dilation, groups=channels),
-                slim.conv_bn_relu(name + '/conv3', channels, channels, 1),
+                slim.conv_bn_relu(f'{name}/conv1', channels, channels, 1),
+                slim.conv_bn(
+                    f'{name}/conv2',
+                    channels,
+                    channels,
+                    3,
+                    stride=stride,
+                    dilation=dilation,
+                    padding=dilation,
+                    groups=channels,
+                ),
+                slim.conv_bn_relu(f'{name}/conv3', channels, channels, 1),
             )
         else:
             self.conv = nn.Sequential(
-                slim.conv_bn_relu(name + '/conv1', in_channels, channels, 1),
-                slim.conv_bn(name + '/conv2', 
-                    channels, channels, 3, stride=stride, 
-                    dilation=dilation, padding=dilation, groups=channels),
-                slim.conv_bn_relu(name + '/conv3', channels, channels, 1),
+                slim.conv_bn_relu(f'{name}/conv1', in_channels, channels, 1),
+                slim.conv_bn(
+                    f'{name}/conv2',
+                    channels,
+                    channels,
+                    3,
+                    stride=stride,
+                    dilation=dilation,
+                    padding=dilation,
+                    groups=channels,
+                ),
+                slim.conv_bn_relu(f'{name}/conv3', channels, channels, 1),
             )
             self.conv0 = nn.Sequential(
-                slim.conv_bn(name + '/conv4', 
-                    in_channels, in_channels, 3, stride=stride, 
-                    dilation=dilation, padding=dilation, groups=in_channels),
-                slim.conv_bn_relu(name + '/conv5', in_channels, channels, 1),
+                slim.conv_bn(
+                    f'{name}/conv4',
+                    in_channels,
+                    in_channels,
+                    3,
+                    stride=stride,
+                    dilation=dilation,
+                    padding=dilation,
+                    groups=in_channels,
+                ),
+                slim.conv_bn_relu(f'{name}/conv5', in_channels, channels, 1),
             )
-        self.shuffle = slim.channel_shuffle(name + '/shuffle', 2)
+        self.shuffle = slim.channel_shuffle(f'{name}/shuffle', 2)
 
     def forward(self, x):
         if not self.downsample:
@@ -65,14 +86,14 @@ class BasicBlock(nn.Module):
     def generate_caffe_prototxt(self, caffe_net, layer):
         if self.stride == 1:
             layer_x1, layer_x2 = L.Slice(layer, ntop=2, axis=1, slice_point=[self.in_channels//2])
-            caffe_net[self.g_name + '/slice1'] = layer_x1
-            caffe_net[self.g_name + '/slice2'] = layer_x2
+            caffe_net[f'{self.g_name}/slice1'] = layer_x1
+            caffe_net[f'{self.g_name}/slice2'] = layer_x2
             layer_x2 = slim.generate_caffe_prototxt(self.conv, caffe_net, layer_x2)
         else:
             layer_x1 = slim.generate_caffe_prototxt(self.conv0, caffe_net, layer)
             layer_x2 = slim.generate_caffe_prototxt(self.conv, caffe_net, layer)
         layer = L.Concat(layer_x1, layer_x2, axis=1)
-        caffe_net[self.g_name + '/concat'] = layer
+        caffe_net[f'{self.g_name}/concat'] = layer
         layer = slim.generate_caffe_prototxt(self.shuffle, caffe_net, layer)
         return layer
 
@@ -112,12 +133,28 @@ class Network(nn.Module):
             out_channels, stride, dilation, num_blocks, stage_type = config
             if stride==2:
                 downsample=True
-            stage_prefix = 'stage_{}'.format(i - 1)
-            blocks = [BasicBlock(stage_prefix + '_1', in_channels, 
-                out_channels, stride, downsample, dilation)]
-            for i in range(1, num_blocks):
-                blocks.append(BasicBlock(stage_prefix + '_{}'.format(i + 1), 
-                    out_channels, out_channels, 1, False, dilation))
+            stage_prefix = f'stage_{i - 1}'
+            blocks = [
+                BasicBlock(
+                    f'{stage_prefix}_1',
+                    in_channels,
+                    out_channels,
+                    stride,
+                    downsample,
+                    dilation,
+                )
+            ]
+            blocks.extend(
+                BasicBlock(
+                    f'{stage_prefix}_{i + 1}',
+                    out_channels,
+                    out_channels,
+                    1,
+                    False,
+                    dilation,
+                )
+                for i in range(1, num_blocks)
+            )
             self.network += [nn.Sequential(*blocks)]
 
             in_channels = out_channels
@@ -158,11 +195,11 @@ class Network(nn.Module):
         caffe_net.tops['data'] = layer
         slim.generate_caffe_prototxt(self, caffe_net, layer)
         print(caffe_net.to_proto())
-        with open(name + '.prototxt', 'wb') as f:
+        with open(f'{name}.prototxt', 'wb') as f:
             f.write(str(caffe_net.to_proto()).encode())
-        caffe_net = caffe.Net(name + '.prototxt', caffe.TEST)
+        caffe_net = caffe.Net(f'{name}.prototxt', caffe.TEST)
         slim.convert_pytorch_to_caffe(self, caffe_net)
-        caffe_net.save(name + '.caffemodel')
+        caffe_net.save(f'{name}.caffemodel')
 
 
 if __name__ == '__main__':

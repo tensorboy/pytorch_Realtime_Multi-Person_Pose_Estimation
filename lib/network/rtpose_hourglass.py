@@ -55,17 +55,13 @@ class Hourglass(nn.Module):
         self.hg = self._make_hour_glass(block, num_blocks, planes, depth)
 
     def _make_residual(self, block, num_blocks, planes):
-        layers = []
-        for i in range(0, num_blocks):
-            layers.append(block(planes * block.expansion, planes))
+        layers = [block(planes * block.expansion, planes) for _ in range(num_blocks)]
         return nn.Sequential(*layers)
 
     def _make_hour_glass(self, block, num_blocks, planes, depth):
         hg = []
         for i in range(depth):
-            res = []
-            for j in range(3):
-                res.append(self._make_residual(block, num_blocks, planes))
+            res = [self._make_residual(block, num_blocks, planes) for _ in range(3)]
             if i == 0:
                 res.append(self._make_residual(block, num_blocks, planes))
             hg.append(nn.ModuleList(res))
@@ -82,8 +78,7 @@ class Hourglass(nn.Module):
             low2 = self.hg[n - 1][3](low1)
         low3 = self.hg[n - 1][2](low2)
         up2 = self.upsample(low3)
-        out = up1 + up2
-        return out
+        return up1 + up2
 
     def forward(self, x):
         return self._hour_glass_forward(self.depth, x)
@@ -142,12 +137,9 @@ class HourglassNet(nn.Module):
                           kernel_size=1, stride=stride, bias=True),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
+        layers.extend(block(self.inplanes, planes) for _ in range(1, blocks))
         return nn.Sequential(*layers)
 
     def _make_fc(self, inplanes, outplanes):
@@ -160,7 +152,6 @@ class HourglassNet(nn.Module):
         )
 
     def forward(self, x):
-        saved_for_loss = []    
         out = []
         x = self.conv1(x)
         x = self.bn1(x)
@@ -182,10 +173,8 @@ class HourglassNet(nn.Module):
                 paf_score_ = self.paf_score_[i](score_paf)
                 ht_score_ = self.ht_score_[i](score_ht)                
                 x = x + fc_ + paf_score_ + ht_score_
-                
-        saved_for_loss.append(score_paf)
-        saved_for_loss.append(score_ht)
 
+        saved_for_loss = [score_paf, score_ht]
         return (score_paf, score_ht), saved_for_loss
 
     def _initialize_weights_norm(self):        
@@ -199,7 +188,10 @@ class HourglassNet(nn.Module):
                 m.bias.data.zero_()
 
 def hg(**kwargs):
-    model = HourglassNet(Bottleneck, num_stacks=kwargs['num_stacks'], 
-    num_blocks=kwargs['num_blocks'], paf_classes=kwargs['paf_classes'], 
-    ht_classes=kwargs['ht_classes'])
-    return model
+    return HourglassNet(
+        Bottleneck,
+        num_stacks=kwargs['num_stacks'],
+        num_blocks=kwargs['num_blocks'],
+        paf_classes=kwargs['paf_classes'],
+        ht_classes=kwargs['ht_classes'],
+    )

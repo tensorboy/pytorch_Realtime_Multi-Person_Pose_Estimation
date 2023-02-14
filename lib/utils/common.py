@@ -64,7 +64,7 @@ class Human:
         return len(self.body_parts.keys())
 
     def get_max_score(self):
-        return max([x.score for _, x in self.body_parts.items()])
+        return max(x.score for _, x in self.body_parts.items())
 
     def get_face_box(self, img_w, img_h, mode=0):
         """
@@ -101,9 +101,8 @@ class Human:
             size = max(size,
                        img_w * math.sqrt((part_reye.x - part_leye.x) ** 2 + (part_reye.y - part_leye.y) ** 2) * 2.0)
 
-        if mode == 1:
-            if not is_reye and not is_leye:
-                return None
+        if mode == 1 and not is_reye and not is_leye:
+            return None
 
         is_rear, part_rear = _include_part(parts, _REar)
         is_lear, part_lear = _include_part(parts, _LEar)
@@ -154,7 +153,7 @@ class Human:
         :return:
         """
 
-        if not (img_w > 0 and img_h > 0):
+        if img_w <= 0 or img_h <= 0:
             raise Exception("img size should be positive")
 
         _NOSE = CocoPart.Nose.value
@@ -170,10 +169,10 @@ class Human:
             return None
 
         # Initial Bounding Box
-        x = min([part[0] for part in part_coords])
-        y = min([part[1] for part in part_coords])
-        x2 = max([part[0] for part in part_coords])
-        y2 = max([part[1] for part in part_coords])
+        x = min(part[0] for part in part_coords)
+        y = min(part[1] for part in part_coords)
+        x2 = max(part[0] for part in part_coords)
+        y2 = max(part[1] for part in part_coords)
 
         # # ------ Adjust heuristically +
         # if face points are detcted, adjust y value
@@ -194,11 +193,11 @@ class Human:
             x -= dx
             x2 += dx
         elif is_neck:
-            if is_lshoulder and not is_rshoulder:
+            if is_lshoulder:
                 half_w = abs(part_lshoulder.x - part_neck.x) * img_w * 1.15
                 x = min(part_neck.x * img_w - half_w, x)
                 x2 = max(part_neck.x * img_w + half_w, x2)
-            elif not is_lshoulder and is_rshoulder:
+            elif is_rshoulder:
                 half_w = abs(part_rshoulder.x - part_neck.x) * img_w * 1.15
                 x = min(part_neck.x * img_w - half_w, x)
                 x2 = max(part_neck.x * img_w + half_w, x2)

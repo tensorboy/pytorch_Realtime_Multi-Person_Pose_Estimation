@@ -175,26 +175,28 @@ class Ying_model(nn.Module):
                                          in_channels=256, out_channels=128, kernel_size=3, padding=1),
                                      nn.ReLU(inplace=True))
         for i in range(stages):
-            setattr(self, 'stage{}'.format(i + 2), stage_block(in_channels=128, out_channels=14) if i == 0 else
-                    stage_block(in_channels=151, out_channels=14))
+            setattr(
+                self,
+                f'stage{i + 2}',
+                stage_block(in_channels=128, out_channels=14)
+                if i == 0
+                else stage_block(in_channels=151, out_channels=14),
+            )
 
         self._initialize_weights_norm()
 
     def forward(self, x):
-        saved_for_loss = []
-        paf_ret, heat_ret = [], []        
+        paf_ret, heat_ret = [], []
         x_in = self.feature_extractor(x)
         x_in_0 = self.stage_0(x_in)
         x_in = x_in_0
         for i in range(self.stages):
-            x_PAF_pred, x_heatmap_pred = getattr(
-                self, 'stage{}'.format(i + 2))(x_in)
+            x_PAF_pred, x_heatmap_pred = getattr(self, f'stage{i + 2}')(x_in)
             paf_ret.append(x_PAF_pred)
             heat_ret.append(x_heatmap_pred)
             if i != self.stages - 1:
                 x_in = torch.cat([x_PAF_pred, x_heatmap_pred, x_in_0], 1)
-        saved_for_loss.append(paf_ret)
-        saved_for_loss.append(heat_ret)                
+        saved_for_loss = [paf_ret, heat_ret]
         return [(paf_ret[-2], heat_ret[-2]), (paf_ret[-1], heat_ret[-1])], saved_for_loss
 
     def _initialize_weights_norm(self):
@@ -251,23 +253,21 @@ def use_inception(model, model_path):
     incep_state_dict = model_zoo.load_url(url, model_dir=model_path)
     incep_keys = incep_state_dict.keys()
 
-    # load weights of vgg
-    weights_load = {}
-    # weight+bias,weight+bias.....(repeat 10 times)
-    for i in range(60):
-        weights_load[list(model.state_dict().keys())[i]
-                     ] = incep_state_dict[list(incep_keys)[i]]
-
+    weights_load = {
+        list(model.state_dict().keys())[i]: incep_state_dict[
+            list(incep_keys)[i]
+        ]
+        for i in range(60)
+    }
     state = model.state_dict()
     state.update(weights_load)
     model.load_state_dict(state)
-    print('load imagenet pretrained model: {}'.format(model_path))
+    print(f'load imagenet pretrained model: {model_path}')
 
 
 def build_names():
     names = []
 
     for j in range(1, 6):
-        for k in range(1, 3):
-            names.append('loss_stage%d_L%d' % (j, k))
+        names.extend('loss_stage%d_L%d' % (j, k) for k in range(1, 3))
     return names
